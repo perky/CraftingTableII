@@ -33,12 +33,12 @@ public class BlockClevercraft extends Block {
         {
             return Block.planks.getBlockTextureFromSide(0);
         }
-        if(i == 2 || i == 4)
+        if(i == 2 || i == 3)
         {
             return blockIndexInTexture + 1;
         } else
         {
-            return blockIndexInTexture;
+            return Block.bookShelf.blockIndexInTexture;
         }
     }
 	

@@ -1,6 +1,7 @@
 package net.minecraft.src;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
@@ -11,6 +12,7 @@ public class GuiClevercraft extends GuiContainer {
 	private float field_35312_g;
     private boolean field_35313_h;
     private boolean field_35314_i;
+    private boolean mouseOverRecipe;
     
 	public GuiClevercraft(EntityPlayer entityplayer)
     {
@@ -18,6 +20,7 @@ public class GuiClevercraft extends GuiContainer {
         field_35312_g = 0.0F;
         field_35313_h = false;
         allowUserInput = true;
+        mouseOverRecipe = false;
         ySize = 208;
     }
 	
@@ -81,6 +84,7 @@ public class GuiClevercraft extends GuiContainer {
         }
         super.drawScreen(i, j, f);
         //----
+        mouseOverRecipe = false;
         for(int j2 = 0; j2 < inventorySlots.inventorySlots.size(); j2++)
         {
             Slot slot1 = (Slot)inventorySlots.inventorySlots.get(j2);
@@ -88,12 +92,18 @@ public class GuiClevercraft extends GuiContainer {
             {
             	SlotClevercraft slotclever1 = (SlotClevercraft)slot1;
             	ItemStack itemstack = null;
-            	if(slotclever1.recipeItemstacks != null)
-            		itemstack = slotclever1.recipeItemstacks[0];
-            	if(itemstack != null)
+            	if(slotclever1.collatedRecipe != null)
             	{
-            		itemRenderer.renderItemIntoGUI(fontRenderer, mc.renderEngine, itemstack, 10, 10);
-            		itemRenderer.renderItemOverlayIntoGUI(fontRenderer, mc.renderEngine, itemstack, 10, 10);
+            		int y = 0;
+            		mouseOverRecipe = true;
+            		for (Map.Entry<Integer, Integer[]> entry : slotclever1.collatedRecipe.entrySet())
+            		{
+            			Integer vals[] = entry.getValue();
+            			itemstack = new ItemStack(entry.getKey(), vals[0], vals[1]);
+            			itemRenderer.renderItemIntoGUI(fontRenderer, mc.renderEngine, itemstack, field_40216_e-24, field_40215_f+28+y);
+                		itemRenderer.renderItemOverlayIntoGUI(fontRenderer, mc.renderEngine, itemstack, field_40216_e-24, field_40215_f+28+y);
+                		y += 18;
+            		}
             	}
             }
         }
@@ -128,6 +138,11 @@ public class GuiClevercraft extends GuiContainer {
         int k1 = i1 + 17;
         int l1 = k1 + 88 + 2;
         drawTexturedModalRect(l + 154, i1 + 17 + (int)((float)(l1 - k1 - 17) * field_35312_g), 0, 208, 16, 16);
+        
+        if(mouseOverRecipe)
+        {
+        	drawTexturedModalRect(l-25, i1, 176, 0, 18, ySize);
+        }
     }
     
     public void handleMouseInput()

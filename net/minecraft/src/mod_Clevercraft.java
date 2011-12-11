@@ -11,6 +11,19 @@ public class mod_Clevercraft extends BaseMod {
 		ModLoader.AddShapelessRecipe(new ItemStack(blockClevercraft, 1), new Object[]{
 			Block.workbench, Item.book
 		});
+		// I have to re add these recipes for some reason.
+		ModLoader.AddRecipe(new ItemStack(Block.blockDiamond, 1), new Object[]{
+			"###", "###", "###",
+			Character.valueOf('#'), Item.diamond
+		});
+		ModLoader.AddRecipe(new ItemStack(Block.blockGold, 1), new Object[]{
+			"###", "###", "###",
+			Character.valueOf('#'), Item.ingotGold
+		});
+		ModLoader.AddRecipe(new ItemStack(Block.blockSteel, 1), new Object[]{
+			"###", "###", "###",
+			Character.valueOf('#'), Item.ingotIron
+		});
 	}
 
 	@Override

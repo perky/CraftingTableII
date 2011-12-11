@@ -15,7 +15,7 @@ public class ContainerClevercraft extends Container {
 		itemList = new ArrayList();
 		thePlayer = entityplayer;
 		recipeList = Collections.unmodifiableList(CraftingManager.getInstance().getRecipeList());
-
+		collatedRecipes = new ArrayList();
 		
 		InventoryPlayer inventoryplayer = entityplayer.inventory;
         for(int l2 = 0; l2 < 5; l2++)
@@ -59,9 +59,6 @@ public class ContainerClevercraft extends Container {
 			{
 				IRecipe irecipe = (IRecipe)recipes.get(i);
 				itemList.add( irecipe.getCraftingResult(null) );
-				//slot = (Slot)this.inventorySlots.get(i);
-				//if(slot instanceof SlotClevercraft)
-					//slot.putStack(irecipe.getCraftingResult(null));
 			}
 			//Update screen.
 			this.func_35374_a(0.0F);
@@ -125,6 +122,12 @@ public class ContainerClevercraft extends Container {
 					if(itemstack1 != null && itemstack1.itemID == itemstack.itemID 
 							&& (itemstack1.getItemDamage() == itemstack.getItemDamage() || itemstack.getItemDamage() == -1))
 					{
+						if(itemstack1.getItem() == Item.bucketLava
+								|| itemstack1.getItem() == Item.bucketMilk
+								|| itemstack1.getItem() == Item.bucketWater)
+						{
+							thePlayer.inventory.addItemStackToInventory(new ItemStack(Item.bucketEmpty, 1));
+						}
 						if(itemstack1.stackSize >= count)
 						{
 							thePlayer.inventory.decrStackSize(n1, count);
@@ -153,7 +156,7 @@ public class ContainerClevercraft extends Container {
         {
             IRecipe irecipe = (IRecipe)recipes.get(n);
             //ArrayList collatedRecipe = new ArrayList();
-            //HashMap collatedRecipe = new HashMap();
+            Map<Integer, Integer[]> collatedRecipe = new HashMap<Integer, Integer[]>();
             if(irecipe instanceof ShapelessRecipes && canCraftShapelessRecipe(irecipe, inventory, collatedRecipe))
             {
             	craftableRecipes.add(irecipe);
@@ -170,30 +173,31 @@ public class ContainerClevercraft extends Container {
 		return craftableRecipes;
 	}
 	
-	private boolean canCraftShapedRecipe(IRecipe irecipe, InventoryPlayer inventory, HashMap collatedRecipe) throws NoSuchFieldException
+	private boolean canCraftShapedRecipe(IRecipe irecipe, InventoryPlayer inventory, Map<Integer, Integer[]> collatedRecipe) throws NoSuchFieldException
 	{
-		ItemStack itemstacks[] = (ItemStack[])ModLoader.getPrivateValue(ShapedRecipes.class, (ShapedRecipes)irecipe, 2);
+		ItemStack itemstacks[] = this.getRecipeItemStackArray(irecipe);
     	boolean canCraft = true;
 
     	// Collate each item together to get total stack size per item.
-    	//HashMap collatedRecipe = new HashMap();
-    	for(int n1 = 0; n1 < itemstacks.length; n1++)
+    	for(int i = 0; i < itemstacks.length; i++)
     	{
-    		if(itemstacks[n1] != null)
+    		if(itemstacks[i] != null)
     		{
-        		if(collatedRecipe.containsKey(itemstacks[n1].itemID))
+        		if(collatedRecipe.containsKey(itemstacks[i].itemID))
         		{
-        			int stacksize = (Integer)collatedRecipe.get(itemstacks[n1].itemID);
-        			collatedRecipe.put(itemstacks[n1].itemID, itemstacks[n1].stackSize+stacksize);
+        			Integer vals[] = (Integer[])collatedRecipe.get(itemstacks[i].itemID);
+        			vals[0] += itemstacks[i].stackSize; 
+        			collatedRecipe.put(itemstacks[i].itemID, vals);
         		} else {
-        			collatedRecipe.put(itemstacks[n1].itemID, itemstacks[n1].stackSize);
+        			Integer vals[] = {itemstacks[i].stackSize, itemstacks[i].getItemDamage()};
+        			collatedRecipe.put((Integer)itemstacks[i].itemID, vals);
         		}
     		}
     	}
     	
-    	for(int n1 = 0; n1 < itemstacks.length; n1++)
+    	for(int i = 0; i < itemstacks.length; i++)
     	{
-    		if(itemstacks[n1] != null && !getInventoryHasItemStack(inventory, itemstacks[n1], collatedRecipe))
+    		if(itemstacks[i] != null && !getInventoryHasItemStack(inventory, itemstacks[i], collatedRecipe))
     		{
     			canCraft = false;
     			break;
@@ -203,29 +207,39 @@ public class ContainerClevercraft extends Container {
     	return canCraft;
 	}
 	
-	private boolean canCraftShapelessRecipe(IRecipe irecipe, InventoryPlayer inventory, HashMap collatedRecipe) throws NoSuchFieldException
+	private boolean canCraftShapelessRecipe(IRecipe irecipe, InventoryPlayer inventory, Map<Integer, Integer[]> collatedRecipe) throws NoSuchFieldException
 	{
 		ArrayList recipeItems = new ArrayList((List)ModLoader.getPrivateValue(ShapelessRecipes.class, (ShapelessRecipes)irecipe, 1));
     	boolean canCraft = true;
     	
     	// Collate each item together to get total stack size per item.
-    	//HashMap collatedRecipe = new HashMap();
-    	
     	for(int i = 0; i < recipeItems.size(); i++)
     	{
     		ItemStack itemstack = (ItemStack)recipeItems.get(i);
-    		collatedRecipe.put(itemstack.itemID, itemstack.stackSize);
-    		if(itemstack != null && !getInventoryHasItemStack(inventory, itemstack, collatedRecipe))
+    		if(itemstack != null)
     		{
-    			canCraft = false;
-    			break;
+	    		if(collatedRecipe.containsKey(itemstack.itemID))
+	    		{
+	    			Integer vals[] = (Integer[])collatedRecipe.get(itemstack.itemID);
+	    			vals[0] += itemstack.stackSize; 
+	    			collatedRecipe.put((Integer)itemstack.itemID, vals);
+	    		} else {
+	    			Integer vals[] = {itemstack.stackSize, itemstack.getItemDamage()};
+	    			collatedRecipe.put((Integer)itemstack.itemID, vals);
+	    		}
+    		
+	    		if(!getInventoryHasItemStack(inventory, itemstack, collatedRecipe))
+	    		{
+	    			canCraft = false;
+	    			break;
+	    		}
     		}
     	}
         
         return canCraft;
 	}
 	
-	public static boolean getInventoryHasItemStack(InventoryPlayer inventory, ItemStack itemstack, HashMap collatedRecipe)
+	public static boolean getInventoryHasItemStack(InventoryPlayer inventory, ItemStack itemstack, Map<Integer, Integer[]> collatedRecipe)
     {
 		ItemStack mInv[] = inventory.mainInventory;
 		ArrayList items = new ArrayList<ItemStack>();
@@ -242,7 +256,8 @@ public class ContainerClevercraft extends Container {
         
         if(collatedRecipe.containsKey(itemstack.itemID))
         {
-	        int stacksize1 = (Integer)collatedRecipe.get(itemstack.itemID);
+        	Integer vals[] = (Integer[])collatedRecipe.get(itemstack.itemID);
+	        int stacksize1 = vals[0];
 	        if(stacksize >= stacksize1)
 	        {
 	        	return true;
@@ -278,8 +293,6 @@ public class ContainerClevercraft extends Container {
                 	slot = (Slot)inventorySlots.get(l + k * 8);
                 	if(slot instanceof SlotClevercraft)
                 	{
-                		ItemStack recipeItemstacks[] = this.getRecipeItemStackArray((IRecipe)recipes.get(i1));
-                		((SlotClevercraft)slot).recipeItemstacks = recipeItemstacks;
                 		((SlotClevercraft)slot).collatedRecipe = (HashMap)collatedRecipes.get(i1);
                 	}
                 } else
@@ -288,7 +301,7 @@ public class ContainerClevercraft extends Container {
                 	slot = (Slot)inventorySlots.get(l + k * 8);
                 	if(slot instanceof SlotClevercraft)
                 	{
-                		((SlotClevercraft)slot).recipeItemstacks = null;
+                		((SlotClevercraft)slot).collatedRecipe = null;
                 	}
                 }
             }

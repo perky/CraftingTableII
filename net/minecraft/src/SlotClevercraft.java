@@ -1,6 +1,7 @@
 package net.minecraft.src;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import net.minecraft.src.forge.ForgeHooks;
 
@@ -9,7 +10,7 @@ public class SlotClevercraft extends Slot {
 	private EntityPlayer thePlayer;
 	private ContainerClevercraft delegate;
 	public ItemStack recipeItemstacks[];
-	public HashMap collatedRecipe;
+	public Map<Integer, Integer[]> collatedRecipe;
 	
 	public SlotClevercraft(IInventory iinventory, EntityPlayer entityplayer, ContainerClevercraft container, int i, int j, int k)
     {
@@ -67,7 +68,7 @@ public class SlotClevercraft extends Slot {
         {
             thePlayer.addStat(AchievementList.bookcase, 1);
         }
-        //ModLoader.TakenFromCrafting(thePlayer, itemstack, craftMatrix);
+        ModLoader.TakenFromCrafting(thePlayer, itemstack, null);
         //ForgeHooks.onTakenFromCrafting(thePlayer, itemstack, craftMatrix);
     }
 }
