@@ -17,6 +17,7 @@ public class GuiClevercraft extends GuiContainer {
 	public GuiClevercraft(EntityPlayer entityplayer)
     {
         super(new ContainerClevercraft(entityplayer));
+        ((ContainerClevercraft)inventorySlots).gui = this;
         field_35312_g = 0.0F;
         field_35313_h = false;
         allowUserInput = true;

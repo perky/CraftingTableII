@@ -12,6 +12,7 @@ public class ContainerClevercraft extends Container {
 	public List recipeList;
 	public List collatedRecipes;
 	public InventoryCrafting craftMatrix;
+	public GuiContainer gui;
 	
 	public ContainerClevercraft(EntityPlayer entityplayer)
     {
@@ -140,8 +141,6 @@ public class ContainerClevercraft extends Container {
 				}
 			}
     	}
-		
-		populateContainer();
 	}
 	
 	private void takeMaxRecipeItems(IRecipe irecipe, Map<Integer, Integer[]> collatedRecipe) throws NoSuchFieldException
@@ -221,6 +220,10 @@ public class ContainerClevercraft extends Container {
 		
 		//Add item to inventory.
 		thePlayer.inventory.addItemStackToInventory(itemstack);
+		
+		//Update container and gui.
+		populateContainer();
+		gui.updateScreen();
 	}
 	
 	private List getRecipeItems(List recipes, InventoryPlayer inventory) throws NoSuchFieldException

@@ -111,5 +111,7 @@ public class SlotClevercraft extends Slot {
                 	thePlayer.inventory.addItemStackToInventory(new ItemStack(itemstack1.getItem().getContainerItem()));
             }
         }
+        delegate.populateContainer();
+        delegate.gui.updateScreen();
     }
 }
