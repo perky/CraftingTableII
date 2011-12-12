@@ -29,6 +29,10 @@ public class mod_Clevercraft extends BaseMod {
 			"###", "###", "###",
 			Character.valueOf('#'), Item.ingotIron
 		});
+		ModLoader.AddRecipe(new ItemStack(Block.blockLapis, 1), new Object[]{
+			"###", "###", "###",
+			Character.valueOf('#'), new ItemStack(Item.dyePowder, 9, 4)
+		});
 	}
 
 	@Override

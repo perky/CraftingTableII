@@ -2,6 +2,8 @@ package net.minecraft.src;
 
 import java.util.*;
 
+import net.minecraft.src.forge.ForgeHooks;
+
 public class ContainerClevercraft extends Container {
 	
 	public List itemList;
@@ -108,7 +110,6 @@ public class ContainerClevercraft extends Container {
 	
 	private void takeRecipeItems(ItemStack itemstacks[]) throws NoSuchFieldException
 	{
-		
 		for(int i = 0; i<9; i++)
 			craftMatrix.setInventorySlotContents(i, null);
 		
@@ -192,8 +193,34 @@ public class ContainerClevercraft extends Container {
 		}
 		takeRecipeItems(recipeItems);
 		
+		//create craft matrix.
+		ItemStack recipeItemstacks[] = getRecipeItemStackArray(irecipe);
+		for(int n = 0; n < recipeItemstacks.length; n++)
+    	{
+			ItemStack itemstack = recipeItemstacks[n];
+			if(itemstack != null)
+				craftMatrix.setInventorySlotContents(n, itemstack);
+    	}
+		
+		//Re-add buckets etc..
+        for(int n = 0; n < craftMatrix.getSizeInventory(); n++)
+        {
+            ItemStack itemstack1 = craftMatrix.getStackInSlot(n);
+            craftMatrix.decrStackSize(n, 1);
+            if(itemstack1 != null)
+            {
+                if(itemstack1.getItem().hasContainerItem())
+                	thePlayer.inventory.addItemStackToInventory(new ItemStack(itemstack1.getItem().getContainerItem()));
+            }
+        }
+		
+		//Send mod hooks.
+		ItemStack itemstack = new ItemStack(outputstack.itemID, outputstack.stackSize*minStack, outputstack.getItemDamage());
+		ModLoader.TakenFromCrafting(thePlayer, itemstack, craftMatrix);
+        ForgeHooks.onTakenFromCrafting(thePlayer, itemstack, craftMatrix);
+		
 		//Add item to inventory.
-		thePlayer.inventory.addItemStackToInventory(new ItemStack(outputstack.itemID, outputstack.stackSize*minStack, outputstack.getItemDamage()));
+		thePlayer.inventory.addItemStackToInventory(itemstack);
 	}
 	
 	private List getRecipeItems(List recipes, InventoryPlayer inventory) throws NoSuchFieldException
