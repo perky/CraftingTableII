@@ -9,6 +9,7 @@ public class ContainerClevercraft extends Container {
 	public EntityPlayer thePlayer; 
 	public List recipeList;
 	public List collatedRecipes;
+	public InventoryCrafting craftMatrix;
 	
 	public ContainerClevercraft(EntityPlayer entityplayer)
     {
@@ -16,13 +17,14 @@ public class ContainerClevercraft extends Container {
 		thePlayer = entityplayer;
 		recipeList = Collections.unmodifiableList(CraftingManager.getInstance().getRecipeList());
 		collatedRecipes = new ArrayList();
+		craftMatrix = new InventoryCrafting(this, 3, 3);
 		
 		InventoryPlayer inventoryplayer = entityplayer.inventory;
         for(int l2 = 0; l2 < 5; l2++)
         {
             for(int j3 = 0; j3 < 8; j3++)
             {
-            	addSlot(new SlotClevercraft(GuiClevercraft.getInventory(), entityplayer, this, j3 + l2 * 8, 8 + j3 * 18, 18 + l2 * 18));
+            	addSlot(new SlotClevercraft(GuiClevercraft.getInventory(), entityplayer, this, craftMatrix, j3 + l2 * 8, 8 + j3 * 18, 18 + l2 * 18));
             }
         }
 
@@ -69,14 +71,13 @@ public class ContainerClevercraft extends Container {
 		}
 	}
 	
-	public void onPickupItem(ItemStack itemstack, int slotnumber)
+	public void onPickupItem(ItemStack itemstack, SlotClevercraft slot)
 	{
-		//find recipe.
-		IRecipe irecipe = (IRecipe)recipes.get(slotnumber);
-		if(irecipe != null)
+		if(slot.irecipe != null)
 		{
 			try {
-				takeRecipeItems(irecipe);
+				ItemStack itemstacks[] = getRecipeItemStackArray(slot.irecipe);
+				takeRecipeItems(itemstacks);
 			} catch (NoSuchFieldException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -105,15 +106,18 @@ public class ContainerClevercraft extends Container {
 		}
 	}
 	
-	private void takeRecipeItems(IRecipe irecipe) throws NoSuchFieldException
+	private void takeRecipeItems(ItemStack itemstacks[]) throws NoSuchFieldException
 	{
-		ItemStack itemstacks[] = getRecipeItemStackArray(irecipe);
+		
+		for(int i = 0; i<9; i++)
+			craftMatrix.setInventorySlotContents(i, null);
 		
 		for(int n = 0; n < itemstacks.length; n++)
     	{
 			ItemStack itemstack = itemstacks[n];
 			if(itemstack != null)
 			{
+				craftMatrix.setInventorySlotContents(n, itemstack);
 				int count = itemstack.stackSize;
 				ItemStack itemstacks1[] = thePlayer.inventory.mainInventory;
 				for(int n1 = 0; n1 < itemstacks1.length; n1++)
@@ -122,12 +126,6 @@ public class ContainerClevercraft extends Container {
 					if(itemstack1 != null && itemstack1.itemID == itemstack.itemID 
 							&& (itemstack1.getItemDamage() == itemstack.getItemDamage() || itemstack.getItemDamage() == -1))
 					{
-						if(itemstack1.getItem() == Item.bucketLava
-								|| itemstack1.getItem() == Item.bucketMilk
-								|| itemstack1.getItem() == Item.bucketWater)
-						{
-							thePlayer.inventory.addItemStackToInventory(new ItemStack(Item.bucketEmpty, 1));
-						}
 						if(itemstack1.stackSize >= count)
 						{
 							thePlayer.inventory.decrStackSize(n1, count);
@@ -143,6 +141,59 @@ public class ContainerClevercraft extends Container {
     	}
 		
 		populateContainer();
+	}
+	
+	private void takeMaxRecipeItems(IRecipe irecipe, Map<Integer, Integer[]> collatedRecipe) throws NoSuchFieldException
+	{
+		int minStack = 9999;
+		
+		for (Map.Entry<Integer, Integer[]> entry : collatedRecipe.entrySet())
+		{
+			int itemCount = 0;
+			int itemid = entry.getKey();
+			int stacksize = entry.getValue()[0];
+			int damageval = entry.getValue()[1];
+			for(int i = 0; i < thePlayer.inventory.getSizeInventory(); i++)
+			{
+				ItemStack itemstack = thePlayer.inventory.getStackInSlot(i);
+				if(itemstack != null && itemstack.itemID == itemid && (itemstack.getItemDamage() == damageval || damageval == -1))
+				{
+					itemCount += itemstack.stackSize;
+				}
+			}
+			int stackDivision = MathHelper.floor_double(itemCount/stacksize);
+			minStack = Math.min(minStack, stackDivision);
+		}
+		
+		if(minStack >= 9999 || minStack == 0)
+			minStack = 1;
+		
+		//Get output item.
+		ItemStack outputstack = irecipe.getRecipeOutput();
+		
+		//Multiply output.
+		int maxStackSize = outputstack.stackSize*minStack;
+		
+		//Limit to max stack size.
+		if(maxStackSize > outputstack.getMaxStackSize())
+		{
+			minStack = 1;
+			maxStackSize = outputstack.stackSize;
+		}
+		
+		//Take items.
+		ItemStack recipeItems[] = new ItemStack[collatedRecipe.size()];
+		int i = 0;
+		for (Map.Entry<Integer, Integer[]> entry : collatedRecipe.entrySet())
+		{
+			int stacksize = entry.getValue()[0]*minStack;
+			recipeItems[i] = new ItemStack(entry.getKey(), stacksize, entry.getValue()[1]);
+			i++;
+		}
+		takeRecipeItems(recipeItems);
+		
+		//Add item to inventory.
+		thePlayer.inventory.addItemStackToInventory(new ItemStack(outputstack.itemID, outputstack.stackSize*minStack, outputstack.getItemDamage()));
 	}
 	
 	private List getRecipeItems(List recipes, InventoryPlayer inventory) throws NoSuchFieldException
@@ -294,6 +345,7 @@ public class ContainerClevercraft extends Container {
                 	if(slot instanceof SlotClevercraft)
                 	{
                 		((SlotClevercraft)slot).collatedRecipe = (HashMap)collatedRecipes.get(i1);
+                		((SlotClevercraft)slot).irecipe = (IRecipe)recipes.get(i1);
                 	}
                 } else
                 {
@@ -302,6 +354,7 @@ public class ContainerClevercraft extends Container {
                 	if(slot instanceof SlotClevercraft)
                 	{
                 		((SlotClevercraft)slot).collatedRecipe = null;
+                		((SlotClevercraft)slot).irecipe = null;
                 	}
                 }
             }
@@ -310,6 +363,24 @@ public class ContainerClevercraft extends Container {
 
     protected void func_35373_b(int i, int j, boolean flag, EntityPlayer entityplayer)
     {
+    }
+    
+    public ItemStack slotClick(int i, int j, boolean flag, EntityPlayer entityplayer)
+    {
+    	// i: Slot number.
+    	// j: Mouse buttons, 0 = left, 1 = right.
+    	// flag: Shift button down.
+    	if(i < 40 && flag)
+    	{
+    		SlotClevercraft slot = (SlotClevercraft)inventorySlots.get(i);
+    		try{
+    			takeMaxRecipeItems(slot.irecipe, slot.collatedRecipe);
+    		} catch (NoSuchFieldException e) {
+    			e.printStackTrace();
+    		}
+    		return null;
+    	}
+    	return super.slotClick(i, j, flag, entityplayer);
     }
 
 }

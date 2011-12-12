@@ -2,8 +2,13 @@ package net.minecraft.src;
 
 public class mod_Clevercraft extends BaseMod {
 	
-	@MLProp public static int blockClevercraftId = 235;
-	public static Block blockClevercraft = new BlockClevercraft(blockClevercraftId);
+	@MLProp public static int blockIDCraftingTableII = 235;
+	
+	public static Block blockClevercraft;
+	static
+	{
+		blockClevercraft = new BlockClevercraft(blockIDCraftingTableII);
+	}
 	
 	public mod_Clevercraft() {
 		ModLoader.RegisterBlock(blockClevercraft);
@@ -28,7 +33,7 @@ public class mod_Clevercraft extends BaseMod {
 
 	@Override
 	public String getVersion() {
-		return "1.2";
+		return "1.3";
 	}
 
 	@Override

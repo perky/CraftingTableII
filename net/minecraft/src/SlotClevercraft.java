@@ -9,15 +9,43 @@ public class SlotClevercraft extends Slot {
 	
 	private EntityPlayer thePlayer;
 	private ContainerClevercraft delegate;
-	public ItemStack recipeItemstacks[];
+	public IInventory craftMatrix;
+	public IRecipe irecipe;
 	public Map<Integer, Integer[]> collatedRecipe;
 	
-	public SlotClevercraft(IInventory iinventory, EntityPlayer entityplayer, ContainerClevercraft container, int i, int j, int k)
+	public SlotClevercraft(IInventory iinventory, EntityPlayer entityplayer, ContainerClevercraft container, IInventory matrix, int i, int j, int k)
     {
         super(iinventory, i, j, k);
         thePlayer = entityplayer;
         delegate = container;
+        craftMatrix = matrix;
     }
+	
+	public void findMaxOutputSize()
+	{
+		int minStack = 9999;
+		
+		for (Map.Entry<Integer, Integer[]> entry : collatedRecipe.entrySet())
+		{
+			for(int i = 0; i < thePlayer.inventory.getSizeInventory(); i++)
+			{
+				ItemStack itemstack = thePlayer.inventory.getStackInSlot(i);
+				int itemid = entry.getKey();
+				int stacksize = entry.getValue()[0];
+				int damageval = entry.getValue()[1];
+				if(itemstack != null && itemstack.itemID == itemid && itemstack.getItemDamage() == damageval)
+				{
+					int stackDivision = MathHelper.floor_double(itemstack.stackSize/stacksize);
+					minStack = Math.min(minStack, stackDivision);
+				}
+			}
+		}
+		
+		if(minStack >= 9999)
+			minStack = 1;
+		
+		getStack().stackSize *= minStack;
+	}
 	
 	public boolean isItemValid(ItemStack itemstack)
     {
@@ -26,7 +54,7 @@ public class SlotClevercraft extends Slot {
 	
 	public void onPickupFromSlot(ItemStack itemstack)
     {
-		delegate.onPickupItem(itemstack, slotNumber);
+		delegate.onPickupItem(itemstack, this);
         itemstack.onCrafting(thePlayer.worldObj, thePlayer);
         if(itemstack.itemID == Block.workbench.blockID)
         {
@@ -68,7 +96,20 @@ public class SlotClevercraft extends Slot {
         {
             thePlayer.addStat(AchievementList.bookcase, 1);
         }
-        ModLoader.TakenFromCrafting(thePlayer, itemstack, null);
-        //ForgeHooks.onTakenFromCrafting(thePlayer, itemstack, craftMatrix);
+        
+        ModLoader.TakenFromCrafting(thePlayer, itemstack, craftMatrix);
+        ForgeHooks.onTakenFromCrafting(thePlayer, itemstack, craftMatrix);
+        
+        //Re-add buckets etc..
+        for(int i = 0; i < craftMatrix.getSizeInventory(); i++)
+        {
+            ItemStack itemstack1 = craftMatrix.getStackInSlot(i);
+            craftMatrix.decrStackSize(i, 1);
+            if(itemstack1 != null)
+            {
+                if(itemstack1.getItem().hasContainerItem())
+                	thePlayer.inventory.addItemStackToInventory(new ItemStack(itemstack1.getItem().getContainerItem()));
+            }
+        }
     }
 }
