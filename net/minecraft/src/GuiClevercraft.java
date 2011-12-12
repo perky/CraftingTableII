@@ -54,8 +54,8 @@ public class GuiClevercraft extends GuiContainer {
 	public void drawScreen(int i, int j, float f)
     {
         boolean flag = Mouse.isButtonDown(0);
-        int k = field_40216_e;
-        int l = field_40215_f;
+        int k = guiLeft;
+        int l = guiTop;
         int i1 = k + 155;
         int j1 = l + 17;
         int k1 = i1 + 14;
@@ -85,6 +85,12 @@ public class GuiClevercraft extends GuiContainer {
         super.drawScreen(i, j, f);
         //----
         mouseOverRecipe = false;
+        RenderHelper.func_41089_c();
+        GL11.glPushMatrix();
+        GL11.glEnable(32826 /*GL_RESCALE_NORMAL_EXT*/);
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapEnabled, (float)240 / 1.0F, (float)240 / 1.0F);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        
         for(int j2 = 0; j2 < inventorySlots.inventorySlots.size(); j2++)
         {
             Slot slot1 = (Slot)inventorySlots.inventorySlots.get(j2);
@@ -100,13 +106,20 @@ public class GuiClevercraft extends GuiContainer {
             		{
             			Integer vals[] = entry.getValue();
             			itemstack = new ItemStack(entry.getKey(), vals[0], vals[1]);
-            			itemRenderer.renderItemIntoGUI(fontRenderer, mc.renderEngine, itemstack, field_40216_e-24, field_40215_f+28+y);
-                		itemRenderer.renderItemOverlayIntoGUI(fontRenderer, mc.renderEngine, itemstack, field_40216_e-24, field_40215_f+28+y);
+            			GL11.glTranslatef(0.0F, 0.0F, 32F);
+            			zLevel = 200F;
+                        itemRenderer.zLevel = 200F;
+            			itemRenderer.renderItemIntoGUI(fontRenderer, mc.renderEngine, itemstack, guiLeft-24, guiTop+28+y);
+                		itemRenderer.renderItemOverlayIntoGUI(fontRenderer, mc.renderEngine, itemstack, guiLeft-24, guiTop+28+y);
+                		zLevel = 0F;
+                        itemRenderer.zLevel = 0F;
                 		y += 18;
             		}
             	}
             }
         }
+        GL11.glPopMatrix();
+        GL11.glEnable(2929 /*GL_DEPTH_TEST*/);
         //----
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glDisable(2896 /*GL_LIGHTING*/);
@@ -114,8 +127,8 @@ public class GuiClevercraft extends GuiContainer {
 	
 	private boolean getIsMouseOverSlot(Slot slot, int i, int j)
     {
-        int k = field_40216_e;
-        int l = field_40215_f;
+        int k = guiLeft;
+        int l = guiTop;
         i -= k;
         j -= l;
         return i >= slot.xDisplayPosition - 1 && i < slot.xDisplayPosition + 16 + 1 && j >= slot.yDisplayPosition - 1 && j < slot.yDisplayPosition + 16 + 1;
@@ -131,8 +144,8 @@ public class GuiClevercraft extends GuiContainer {
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         int k = mc.renderEngine.getTexture("/gui/crafttableii.png");
         mc.renderEngine.bindTexture(k);
-        int l = field_40216_e;
-        int i1 = field_40215_f;
+        int l = guiLeft;
+        int i1 = guiTop;
         drawTexturedModalRect(l, i1, 0, 0, xSize, ySize);
         int j1 = l + 155;
         int k1 = i1 + 17;
