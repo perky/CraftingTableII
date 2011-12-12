@@ -28,7 +28,7 @@ public class mod_Clevercraft extends BaseMod {
 
 	@Override
 	public String getVersion() {
-		return "1.1";
+		return "1.2";
 	}
 
 	@Override
