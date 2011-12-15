@@ -2,7 +2,7 @@ package net.minecraft.src;
 
 import java.util.*;
 
-public class BlockClevercraft extends Block {
+public class BlockClevercraft extends Block implements ICraftingDescription {
 	
 	private int toptexture;
 	
@@ -41,5 +41,10 @@ public class BlockClevercraft extends Block {
             return Block.bookShelf.blockIndexInTexture;
         }
     }
+	
+	public String getDescription(int damageValue)
+	{
+		return "Testing";
+	}
 	
 }

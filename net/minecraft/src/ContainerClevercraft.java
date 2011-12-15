@@ -267,10 +267,10 @@ public class ContainerClevercraft extends Container {
         		if(collatedRecipe.containsKey(itemstacks[i].itemID))
         		{
         			Integer vals[] = (Integer[])collatedRecipe.get(itemstacks[i].itemID);
-        			vals[0] += itemstacks[i].stackSize; 
+        			vals[0] += 1; 
         			collatedRecipe.put(itemstacks[i].itemID, vals);
         		} else {
-        			Integer vals[] = {itemstacks[i].stackSize, itemstacks[i].getItemDamage()};
+        			Integer vals[] = {1, itemstacks[i].getItemDamage()};
         			collatedRecipe.put((Integer)itemstacks[i].itemID, vals);
         		}
     		}
@@ -302,10 +302,10 @@ public class ContainerClevercraft extends Container {
 	    		if(collatedRecipe.containsKey(itemstack.itemID))
 	    		{
 	    			Integer vals[] = (Integer[])collatedRecipe.get(itemstack.itemID);
-	    			vals[0] += itemstack.stackSize; 
+	    			vals[0] += 1; 
 	    			collatedRecipe.put((Integer)itemstack.itemID, vals);
 	    		} else {
-	    			Integer vals[] = {itemstack.stackSize, itemstack.getItemDamage()};
+	    			Integer vals[] = {1, itemstack.getItemDamage()};
 	    			collatedRecipe.put((Integer)itemstack.itemID, vals);
 	    		}
     		

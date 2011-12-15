@@ -25,6 +25,13 @@ public class GuiClevercraft extends GuiContainer {
         ySize = 208;
     }
 	
+	public void initGui()
+    {
+		super.initGui();
+    	controlList.clear();
+    	guiLeft += 40;
+    }
+	
 	protected void func_35309_a(Slot slot, int i, int j, boolean flag)
 	{
 		super.func_35309_a(slot, i, j, flag);
@@ -44,12 +51,6 @@ public class GuiClevercraft extends GuiContainer {
 	static InventoryBasic getInventory()
     {
         return inventory;
-    }
-	
-	public void initGui()
-    {
-		super.initGui();
-    	controlList.clear();
     }
 	
 	public void drawScreen(int i, int j, float f)
@@ -95,9 +96,42 @@ public class GuiClevercraft extends GuiContainer {
         for(int j2 = 0; j2 < inventorySlots.inventorySlots.size(); j2++)
         {
             Slot slot1 = (Slot)inventorySlots.inventorySlots.get(j2);
+            
+            if(slot1.getStack() != null && getIsMouseOverSlot(slot1, i, j))
+        	{
+            	mouseOverRecipe = true;
+            	ItemStack descItem = slot1.getStack();
+        		String itemname = descItem.getItem().getItemDisplayName(descItem);
+        		String itemcodename = descItem.getItem().getItemName() + ".1";
+        		String description = mod_Clevercraft.getItemDescription(itemcodename);
+        		
+        		if(descItem.getItem() instanceof ICraftingDescription)
+        		{
+        			Item item = descItem.getItem();
+        			description = ((ICraftingDescription)item).getDescription(0);
+        		}
+        		
+        		float scalef = 0.5F;
+        		int titleLeft = guiLeft - 118;
+        		int titleTop  = guiTop + 24;
+        		int descLeft = MathHelper.floor_float(titleLeft/scalef);
+        		int descTop = MathHelper.floor_float(titleTop/scalef);
+        		fontRenderer.drawStringWithShadow(itemname, titleLeft, titleTop, -1);
+        		
+        		GL11.glPushMatrix();
+        		GL11.glScalef(scalef, scalef, 1F);
+        		GL11.glTranslatef(descLeft, descTop, 0);
+            	//fontRenderer.drawStringWithShadow("Hello\nThere", 0, +16, -1);
+            	fontRenderer.drawSplitString(description, 0, 24, 180, -1);
+            	fontRenderer.drawSplitString("Code Name:", 0, 285, 180, -1);
+            	fontRenderer.drawSplitString(itemcodename, 0, 295, 180, -1);
+            	GL11.glPopMatrix();
+        	}
+            
             if(slot1 != null && slot1 instanceof SlotClevercraft && getIsMouseOverSlot(slot1, i, j))
             {
             	SlotClevercraft slotclever1 = (SlotClevercraft)slot1;
+            	
             	ItemStack itemstack = null;
             	if(slotclever1.collatedRecipe != null)
             	{
@@ -153,9 +187,11 @@ public class GuiClevercraft extends GuiContainer {
         int l1 = k1 + 88 + 2;
         drawTexturedModalRect(l + 154, i1 + 17 + (int)((float)(l1 - k1 - 17) * field_35312_g), 0, 208, 16, 16);
         
+        k = mc.renderEngine.getTexture("/gui/crafttableii_description.png");
+        mc.renderEngine.bindTexture(k);
         if(mouseOverRecipe)
         {
-        	drawTexturedModalRect(l-25, i1, 176, 0, 18, ySize);
+        	drawTexturedModalRect(l-124, i1+18, 0, 0, 121, 162);
         }
     }
     
