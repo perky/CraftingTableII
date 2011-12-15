@@ -44,7 +44,9 @@ public class BlockClevercraft extends Block implements ICraftingDescription {
 	
 	public String getDescription(int damageValue)
 	{
-		return "Testing";
+		return "The crafting table of awesomeness that you are using right now! No need to remeber fiddly recipe patterns, the " +
+				"crafting table II will figure it out all for you.\n\n" +
+				"Shift click to craft as much of that item a possible.";
 	}
 	
 }

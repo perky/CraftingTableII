@@ -102,13 +102,29 @@ public class GuiClevercraft extends GuiContainer {
             	mouseOverRecipe = true;
             	ItemStack descItem = slot1.getStack();
         		String itemname = descItem.getItem().getItemDisplayName(descItem);
-        		String itemcodename = descItem.getItem().getItemName() + ".1";
-        		String description = mod_Clevercraft.getItemDescription(itemcodename);
+        		String itemcodename = descItem.getItem().getItemName();
+        		if(itemcodename.equalsIgnoreCase("null"))
+        			itemcodename = itemname;
         		
-        		if(descItem.getItem() instanceof ICraftingDescription)
+        		String description = "";
+        		Item item = descItem.getItem();
+        		if(item instanceof ItemBlock)
         		{
-        			Item item = descItem.getItem();
-        			description = ((ICraftingDescription)item).getDescription(0);
+        			Block block = Block.blocksList[((ItemBlock) item).getBlockID()];
+        			if(block instanceof ICraftingDescription)
+        			{
+        				description = ((ICraftingDescription)block).getDescription( descItem.getItemDamage() );
+        			}
+        		}
+        		
+        		if(description == "")
+        		{
+	        		if(item instanceof ICraftingDescription)
+	        		{
+	        			description = ((ICraftingDescription)item).getDescription( descItem.getItemDamage() );
+	        		} else {
+	        			description = mod_Clevercraft.getItemDescription(itemcodename, descItem.getItemDamage());
+	        		}
         		}
         		
         		float scalef = 0.5F;
@@ -124,7 +140,7 @@ public class GuiClevercraft extends GuiContainer {
             	//fontRenderer.drawStringWithShadow("Hello\nThere", 0, +16, -1);
             	fontRenderer.drawSplitString(description, 0, 24, 180, -1);
             	fontRenderer.drawSplitString("Code Name:", 0, 285, 180, -1);
-            	fontRenderer.drawSplitString(itemcodename, 0, 295, 180, -1);
+            	fontRenderer.drawSplitString(itemcodename+"."+descItem.getItemDamage()+".1", 0, 295, 180, -1);
             	GL11.glPopMatrix();
         	}
             
