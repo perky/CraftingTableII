@@ -7,15 +7,20 @@ import java.util.Properties;
 import java.util.regex.*;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.src.forge.ICraftingHandler;
+import net.minecraft.src.forge.MinecraftForge;
 import au.com.bytecode.opencsv.CSVReader;
 
-public class mod_Clevercraft extends BaseMod {
+public class mod_Clevercraft extends BaseModMp {
 	
-	@MLProp public static int blockIDCraftingTableII = 235;
-	public static Properties itemDescriptions; 
+	@MLProp public static int blockIDCraftingTableII = 235; 
+	@MLProp public static int guiIDCraftingTableII = 235;
+	@MLProp public static boolean shouldShowDescriptions = true;
+	
 	public static List itemDescriptions2;
 	public static Block blockClevercraft;
 	private static final File descriptionDir = new File(Minecraft.getMinecraftDir(), "/config/itemdescriptions/");
+	private static final File vanillaCsv = new File(Minecraft.getMinecraftDir(), "/config/itemdescriptions/vanilla.csv");
 	
 	public mod_Clevercraft() {
 		initBlocks();
@@ -24,23 +29,11 @@ public class mod_Clevercraft extends BaseMod {
 		ModLoader.AddShapelessRecipe(new ItemStack(blockClevercraft, 1), new Object[]{
 			Block.workbench, Item.book
 		});
-		
-		/*
-		itemDescriptions = new Properties();
-		try
-		{
-			itemDescriptions.load(new FileInputStream("config/ItemDescriptions.cfg"));
-		} catch (Exception e){
-			e.printStackTrace();
-		}
-		*/
-		
-		
-		
+
+		ModLoaderMp.RegisterGUI(this, guiIDCraftingTableII);
 		
 		try{
-			String vanillaFile = ModLoader.getMinecraftInstance().getMinecraftDir()+"/config/itemdescriptions/vanilla.csv";
-			CSVReader reader = new CSVReader(new FileReader(vanillaFile));
+			CSVReader reader = new CSVReader(new FileReader(vanillaCsv));
 			itemDescriptions2 = reader.readAll();
 			ModLoader.getLogger().fine("Vanilla.csv descriptions loaded");
 			
@@ -58,24 +51,37 @@ public class mod_Clevercraft extends BaseMod {
 				}
 			}
 		} catch(Exception e){
-			
+			e.printStackTrace();
 		}
+		
 	}
 	
 	public static void initBlocks()
 	{
 		blockClevercraft = new BlockClevercraft(blockIDCraftingTableII);
-		System.out.println(blockClevercraft.blockID);
 	}
+	
+	public GuiScreen HandleGUI(int inventoryType) 
+    {
+            if(inventoryType == guiIDCraftingTableII)
+                    return new GuiClevercraft( ModLoader.getMinecraftInstance().thePlayer );
+            else return null;
+    }
 	
 	
 	private static Pattern descriptionPattern = Pattern.compile("(.*\\..*)\\.(.*)\\.(.*)");
+	private static Pattern rangePattern = Pattern.compile("([0-9]*)-([0-9]*)");
 	private static Matcher matcher;
+	private static Matcher matcher1;
 	private static String lastItemName;
 	private static String lastItemDescription;
 	private static int lastDataVal;
+	
 	public static String getItemDescription(String itemName, int dataval)
 	{
+		if(itemDescriptions2 == null || itemDescriptions2.size() == 0)
+			return "";
+		
 		if(lastItemName != null && itemName == lastItemName && dataval == lastDataVal)
 		{
 			return lastItemDescription;
@@ -88,20 +94,30 @@ public class mod_Clevercraft extends BaseMod {
 			{
 				matcher = descriptionPattern.matcher(entry[0]);
 				while (matcher.find()) {
-					if(matcher.group(1).equalsIgnoreCase(itemName))
+					if(matcher.group(1).equalsIgnoreCase(itemName) && matcher.group(3).equalsIgnoreCase("1"))
 					{
-						System.out.println(matcher.group());
-					}
-					if(matcher.group(1).equalsIgnoreCase(itemName) 
-							&& (matcher.group(2).equalsIgnoreCase(Integer.toString(dataval)) || matcher.group(2).equalsIgnoreCase("*"))
-							&& matcher.group(3).equalsIgnoreCase("1"))
-					{
-						lastItemName = itemName;
-						lastDataVal = dataval;
-						lastItemDescription = entry[2];
-						return entry[2];
-					} else {
-						break;
+						matcher1 = rangePattern.matcher(matcher.group(2));
+						while(matcher1.find()) {
+							int low = Integer.parseInt(matcher1.group(1));
+							int high = Integer.parseInt(matcher1.group(2));
+							if(dataval >= low && dataval <= high)
+							{
+								lastItemName = itemName;
+								lastDataVal = dataval;
+								lastItemDescription = entry[2];
+								return entry[2];
+							}
+						}
+						
+						if(matcher.group(2).equalsIgnoreCase(Integer.toString(dataval)) || matcher.group(2).equalsIgnoreCase("*"))
+						{
+							lastItemName = itemName;
+							lastDataVal = dataval;
+							lastItemDescription = entry[2];
+							return entry[2];
+						} else {
+							break;
+						}
 					}
 				}
 			}
@@ -112,7 +128,7 @@ public class mod_Clevercraft extends BaseMod {
 
 	@Override
 	public String getVersion() {
-		return "1.3.1";
+		return "1.4.1";
 	}
 
 	@Override

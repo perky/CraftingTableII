@@ -13,6 +13,7 @@ public class GuiClevercraft extends GuiContainer {
     private boolean field_35313_h;
     private boolean field_35314_i;
     private boolean mouseOverRecipe;
+    private boolean shouldShowDescriptions;
     
 	public GuiClevercraft(EntityPlayer entityplayer)
     {
@@ -22,6 +23,7 @@ public class GuiClevercraft extends GuiContainer {
         field_35313_h = false;
         allowUserInput = true;
         mouseOverRecipe = false;
+        shouldShowDescriptions = mod_Clevercraft.shouldShowDescriptions;
         ySize = 208;
     }
 	
@@ -29,7 +31,8 @@ public class GuiClevercraft extends GuiContainer {
     {
 		super.initGui();
     	controlList.clear();
-    	guiLeft += 40;
+    	if(mod_Clevercraft.shouldShowDescriptions)
+    		guiLeft += 40;
     }
 	
 	protected void func_35309_a(Slot slot, int i, int j, boolean flag)
@@ -52,6 +55,102 @@ public class GuiClevercraft extends GuiContainer {
     {
         return inventory;
     }
+	
+	public void drawDescriptions(int i, int j)
+	{
+        RenderHelper.func_41089_c();
+        GL11.glPushMatrix();
+        GL11.glEnable(32826 /*GL_RESCALE_NORMAL_EXT*/);
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapEnabled, (float)240 / 1.0F, (float)240 / 1.0F);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        
+        for(int j2 = 0; j2 < inventorySlots.inventorySlots.size(); j2++)
+        {
+            Slot slot1 = (Slot)inventorySlots.inventorySlots.get(j2);
+            
+            if(slot1.getStack() != null && slot1.getStack().getItem() != null && getIsMouseOverSlot(slot1, i, j))
+        	{
+            	mouseOverRecipe = true;
+            	ItemStack descItem = slot1.getStack();
+            	Item item = descItem.getItem();
+        		String itemname = item.getItemDisplayName(descItem);
+        		String itemcodename = "null";
+        		String description = "";
+        		try {
+        			itemcodename = (String)item.getItemName();
+        		} catch(Exception e) {
+        			e.printStackTrace();
+        		}
+        		
+        		if(itemcodename == null)
+        			itemcodename = "item."+itemname;
+        		else if(itemcodename.equalsIgnoreCase("null"))
+        			itemcodename = "item."+itemname;
+        		
+        		
+        		if(item != null && item instanceof ItemBlock)
+        		{
+        			Block block = Block.blocksList[((ItemBlock) item).getBlockID()];
+        			if(block != null && block instanceof ICraftingDescription)
+        			{
+        				description = ((ICraftingDescription)block).getDescription( descItem.getItemDamage() );
+        			}
+        		}
+        		
+        		if(description == "")
+        		{
+	        		if(item != null && item instanceof ICraftingDescription)
+	        		{
+	        			description = ((ICraftingDescription)item).getDescription( descItem.getItemDamage() );
+	        		} else {
+	        			description = mod_Clevercraft.getItemDescription(itemcodename, descItem.getItemDamage());
+	        		}
+        		}
+        		
+        		float scalef = 0.5F;
+        		int titleLeft = guiLeft - 118;
+        		int titleTop  = guiTop + 24;
+        		int descLeft = MathHelper.floor_float(titleLeft/scalef);
+        		int descTop = MathHelper.floor_float(titleTop/scalef);
+        		fontRenderer.drawStringWithShadow(itemname, titleLeft, titleTop, -1);
+        		
+        		GL11.glPushMatrix();
+        		GL11.glScalef(scalef, scalef, 1F);
+        		GL11.glTranslatef(descLeft, descTop, 0);
+            	fontRenderer.drawSplitString(description, 0, 24, 180, -1);
+            	fontRenderer.drawSplitString("Code Name:", 0, 285, 180, -1);
+            	fontRenderer.drawSplitString(itemcodename+"."+descItem.getItemDamage()+".1", 0, 295, 180, -1);
+            	GL11.glPopMatrix();
+        	}
+            
+            if(slot1 != null && slot1 instanceof SlotClevercraft && getIsMouseOverSlot(slot1, i, j))
+            {
+            	SlotClevercraft slotclever1 = (SlotClevercraft)slot1;
+            	
+            	ItemStack itemstack = null;
+            	if(slotclever1.collatedRecipe != null)
+            	{
+            		int y = 0;
+            		mouseOverRecipe = true;
+            		for (Map.Entry<Integer, Integer[]> entry : slotclever1.collatedRecipe.entrySet())
+            		{
+            			Integer vals[] = entry.getValue();
+            			itemstack = new ItemStack(entry.getKey(), vals[0], vals[1]);
+            			GL11.glTranslatef(0.0F, 0.0F, 32F);
+            			zLevel = 200F;
+                        itemRenderer.zLevel = 200F;
+            			itemRenderer.renderItemIntoGUI(fontRenderer, mc.renderEngine, itemstack, guiLeft-24, guiTop+28+y);
+                		itemRenderer.renderItemOverlayIntoGUI(fontRenderer, mc.renderEngine, itemstack, guiLeft-24, guiTop+28+y);
+                		zLevel = 0F;
+                        itemRenderer.zLevel = 0F;
+                		y += 18;
+            		}
+            	}
+            }
+        }
+        GL11.glPopMatrix();
+        GL11.glEnable(2929 /*GL_DEPTH_TEST*/);
+	}
 	
 	public void drawScreen(int i, int j, float f)
     {
@@ -87,90 +186,8 @@ public class GuiClevercraft extends GuiContainer {
         super.drawScreen(i, j, f);
         //----
         mouseOverRecipe = false;
-        RenderHelper.func_41089_c();
-        GL11.glPushMatrix();
-        GL11.glEnable(32826 /*GL_RESCALE_NORMAL_EXT*/);
-        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapEnabled, (float)240 / 1.0F, (float)240 / 1.0F);
-        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-        
-        for(int j2 = 0; j2 < inventorySlots.inventorySlots.size(); j2++)
-        {
-            Slot slot1 = (Slot)inventorySlots.inventorySlots.get(j2);
-            
-            if(slot1.getStack() != null && getIsMouseOverSlot(slot1, i, j))
-        	{
-            	mouseOverRecipe = true;
-            	ItemStack descItem = slot1.getStack();
-        		String itemname = descItem.getItem().getItemDisplayName(descItem);
-        		String itemcodename = descItem.getItem().getItemName();
-        		if(itemcodename.equalsIgnoreCase("null"))
-        			itemcodename = itemname;
-        		
-        		String description = "";
-        		Item item = descItem.getItem();
-        		if(item instanceof ItemBlock)
-        		{
-        			Block block = Block.blocksList[((ItemBlock) item).getBlockID()];
-        			if(block instanceof ICraftingDescription)
-        			{
-        				description = ((ICraftingDescription)block).getDescription( descItem.getItemDamage() );
-        			}
-        		}
-        		
-        		if(description == "")
-        		{
-	        		if(item instanceof ICraftingDescription)
-	        		{
-	        			description = ((ICraftingDescription)item).getDescription( descItem.getItemDamage() );
-	        		} else {
-	        			description = mod_Clevercraft.getItemDescription(itemcodename, descItem.getItemDamage());
-	        		}
-        		}
-        		
-        		float scalef = 0.5F;
-        		int titleLeft = guiLeft - 118;
-        		int titleTop  = guiTop + 24;
-        		int descLeft = MathHelper.floor_float(titleLeft/scalef);
-        		int descTop = MathHelper.floor_float(titleTop/scalef);
-        		fontRenderer.drawStringWithShadow(itemname, titleLeft, titleTop, -1);
-        		
-        		GL11.glPushMatrix();
-        		GL11.glScalef(scalef, scalef, 1F);
-        		GL11.glTranslatef(descLeft, descTop, 0);
-            	//fontRenderer.drawStringWithShadow("Hello\nThere", 0, +16, -1);
-            	fontRenderer.drawSplitString(description, 0, 24, 180, -1);
-            	fontRenderer.drawSplitString("Code Name:", 0, 285, 180, -1);
-            	fontRenderer.drawSplitString(itemcodename+"."+descItem.getItemDamage()+".1", 0, 295, 180, -1);
-            	GL11.glPopMatrix();
-        	}
-            
-            if(slot1 != null && slot1 instanceof SlotClevercraft && getIsMouseOverSlot(slot1, i, j))
-            {
-            	SlotClevercraft slotclever1 = (SlotClevercraft)slot1;
-            	
-            	ItemStack itemstack = null;
-            	if(slotclever1.collatedRecipe != null)
-            	{
-            		int y = 0;
-            		mouseOverRecipe = true;
-            		for (Map.Entry<Integer, Integer[]> entry : slotclever1.collatedRecipe.entrySet())
-            		{
-            			Integer vals[] = entry.getValue();
-            			itemstack = new ItemStack(entry.getKey(), vals[0], vals[1]);
-            			GL11.glTranslatef(0.0F, 0.0F, 32F);
-            			zLevel = 200F;
-                        itemRenderer.zLevel = 200F;
-            			itemRenderer.renderItemIntoGUI(fontRenderer, mc.renderEngine, itemstack, guiLeft-24, guiTop+28+y);
-                		itemRenderer.renderItemOverlayIntoGUI(fontRenderer, mc.renderEngine, itemstack, guiLeft-24, guiTop+28+y);
-                		zLevel = 0F;
-                        itemRenderer.zLevel = 0F;
-                		y += 18;
-            		}
-            	}
-            }
-        }
-        GL11.glPopMatrix();
-        GL11.glEnable(2929 /*GL_DEPTH_TEST*/);
+        if(shouldShowDescriptions)
+        	drawDescriptions(i, j);
         //----
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glDisable(2896 /*GL_LIGHTING*/);
@@ -226,7 +243,7 @@ public class GuiClevercraft extends GuiContainer {
             {
                 i = -1;
             }
-            field_35312_g -= (double)i / (double)j;
+            field_35312_g += (double)i / (double)j;
             if(field_35312_g < 0.0F)
             {
                 field_35312_g = 0.0F;

@@ -82,10 +82,13 @@ public class ContainerClevercraft extends Container {
 				ItemStack itemstacks[] = getRecipeItemStackArray(slot.irecipe);
 				takeRecipeItems(itemstacks);
 			} catch (NoSuchFieldException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
+		
+		onCraftingHook(itemstack, 1);
+		populateContainer();
+        gui.updateScreen();
 	}
 	
 	private ItemStack[] getRecipeItemStackArray(IRecipe irecipe)
@@ -116,26 +119,26 @@ public class ContainerClevercraft extends Container {
 		
 		for(int n = 0; n < itemstacks.length; n++)
     	{
-			ItemStack itemstack = itemstacks[n];
-			if(itemstack != null)
+			ItemStack itemstack1 = itemstacks[n];
+			if(itemstack1 != null)
 			{
-				craftMatrix.setInventorySlotContents(n, itemstack);
-				int count = itemstack.stackSize;
+				craftMatrix.setInventorySlotContents(n, itemstack1);	
+				int count = itemstack1.stackSize;
 				ItemStack itemstacks1[] = thePlayer.inventory.mainInventory;
 				for(int n1 = 0; n1 < itemstacks1.length; n1++)
 				{
-					ItemStack itemstack1 = itemstacks1[n1];
-					if(itemstack1 != null && itemstack1.itemID == itemstack.itemID 
-							&& (itemstack1.getItemDamage() == itemstack.getItemDamage() || itemstack.getItemDamage() == -1))
+					ItemStack itemstack2 = itemstacks1[n1];
+					if(itemstack2 != null && itemstack2.itemID == itemstack1.itemID 
+							&& (itemstack2.getItemDamage() == itemstack1.getItemDamage() || itemstack1.getItemDamage() == -1))
 					{
-						if(itemstack1.stackSize >= count)
+						if(itemstack2.stackSize >= count)
 						{
 							thePlayer.inventory.decrStackSize(n1, count);
 							count = 0;
 							break;
 						} else {
-							thePlayer.inventory.decrStackSize(n1, itemstack1.stackSize);
-							count -= itemstack1.stackSize;
+							thePlayer.inventory.decrStackSize(n1, itemstack2.stackSize);
+							count -= itemstack2.stackSize;
 						}
 					}
 				}
@@ -145,28 +148,46 @@ public class ContainerClevercraft extends Container {
 	
 	private void takeMaxRecipeItems(IRecipe irecipe, Map<Integer, Integer[]> collatedRecipe) throws NoSuchFieldException
 	{
-		int minStack = 9999;
+		if(collatedRecipe == null)
+			return;
 		
-		for (Map.Entry<Integer, Integer[]> entry : collatedRecipe.entrySet())
+		int minStack = 9999;
+		boolean flag = true;
+		ItemStack recipeItems[] = new ItemStack[collatedRecipe.size()];
+		for(int i = 0; i < recipeItems.length; i++)
 		{
-			int itemCount = 0;
-			int itemid = entry.getKey();
-			int stacksize = entry.getValue()[0];
-			int damageval = entry.getValue()[1];
-			for(int i = 0; i < thePlayer.inventory.getSizeInventory(); i++)
+			ItemStack itemstack1 = recipeItems[i];
+			if(itemstack1 != null && itemstack1.getMaxStackSize() == 1)
 			{
-				ItemStack itemstack = thePlayer.inventory.getStackInSlot(i);
-				if(itemstack != null && itemstack.itemID == itemid && (itemstack.getItemDamage() == damageval || damageval == -1))
-				{
-					itemCount += itemstack.stackSize;
-				}
+				minStack = 1;
+				flag = false;
+				break;
 			}
-			int stackDivision = MathHelper.floor_double(itemCount/stacksize);
-			minStack = Math.min(minStack, stackDivision);
 		}
 		
-		if(minStack >= 9999 || minStack == 0)
-			minStack = 1;
+		if(flag)
+		{
+			for (Map.Entry<Integer, Integer[]> entry : collatedRecipe.entrySet())
+			{
+				int itemCount = 0;
+				int itemid = entry.getKey();
+				int stacksize = entry.getValue()[0];
+				int damageval = entry.getValue()[1];
+				for(int i = 0; i < thePlayer.inventory.getSizeInventory(); i++)
+				{
+					ItemStack itemstack = thePlayer.inventory.getStackInSlot(i);
+					if(itemstack != null && itemstack.itemID == itemid && (itemstack.getItemDamage() == damageval || damageval == -1))
+					{
+						itemCount += itemstack.stackSize;
+					}
+				}
+				int stackDivision = MathHelper.floor_double(itemCount/stacksize);
+				minStack = Math.min(minStack, stackDivision);
+			}
+			
+			if(minStack >= 9999 || minStack == 0)
+				minStack = 1;
+		}
 		
 		//Get output item.
 		ItemStack outputstack = irecipe.getRecipeOutput();
@@ -177,12 +198,11 @@ public class ContainerClevercraft extends Container {
 		//Limit to max stack size.
 		if(maxStackSize > outputstack.getMaxStackSize())
 		{
-			minStack = 1;
-			maxStackSize = outputstack.stackSize;
+			minStack = MathHelper.floor_double(outputstack.getMaxStackSize() / outputstack.stackSize);
+			maxStackSize = outputstack.getMaxStackSize();
 		}
 		
 		//Take items.
-		ItemStack recipeItems[] = new ItemStack[collatedRecipe.size()];
 		int i = 0;
 		for (Map.Entry<Integer, Integer[]> entry : collatedRecipe.entrySet())
 		{
@@ -192,31 +212,9 @@ public class ContainerClevercraft extends Container {
 		}
 		takeRecipeItems(recipeItems);
 		
-		//create craft matrix.
-		ItemStack recipeItemstacks[] = getRecipeItemStackArray(irecipe);
-		for(int n = 0; n < recipeItemstacks.length; n++)
-    	{
-			ItemStack itemstack = recipeItemstacks[n];
-			if(itemstack != null)
-				craftMatrix.setInventorySlotContents(n, itemstack);
-    	}
-		
-		//Re-add buckets etc..
-        for(int n = 0; n < craftMatrix.getSizeInventory(); n++)
-        {
-            ItemStack itemstack1 = craftMatrix.getStackInSlot(n);
-            craftMatrix.decrStackSize(n, 1);
-            if(itemstack1 != null)
-            {
-                if(itemstack1.getItem().hasContainerItem())
-                	thePlayer.inventory.addItemStackToInventory(new ItemStack(itemstack1.getItem().getContainerItem()));
-            }
-        }
-		
 		//Send mod hooks.
 		ItemStack itemstack = new ItemStack(outputstack.itemID, outputstack.stackSize*minStack, outputstack.getItemDamage());
-		ModLoader.TakenFromCrafting(thePlayer, itemstack, craftMatrix);
-        ForgeHooks.onTakenFromCrafting(thePlayer, itemstack, craftMatrix);
+		onCraftingHook(itemstack, minStack);
 		
 		//Add item to inventory.
 		thePlayer.inventory.addItemStackToInventory(itemstack);
@@ -224,6 +222,39 @@ public class ContainerClevercraft extends Container {
 		//Update container and gui.
 		populateContainer();
 		gui.updateScreen();
+	}
+	
+	public void onCraftingHook(ItemStack itemstack, int multiplier)
+	{
+		int stacksizes[] = new int[craftMatrix.getSizeInventory()];
+        for(int i1 = 0; i1 < craftMatrix.getSizeInventory(); i1++)
+        {
+        	ItemStack itemstack1 = craftMatrix.getStackInSlot(i1);
+        	if(itemstack1 != null)
+        		stacksizes[i1] = itemstack1.stackSize;
+        }
+        
+        ModLoader.TakenFromCrafting(thePlayer, itemstack, craftMatrix);
+		ForgeHooks.onTakenFromCrafting(thePlayer, itemstack, craftMatrix);
+		
+		for(int i = 0; i < 9; i++)
+		{
+			ItemStack itemstack1 = craftMatrix.getStackInSlot(i);
+			if(itemstack1 != null)
+			{
+				craftMatrix.decrStackSize(i, 1);
+				ItemStack itemstack2 = craftMatrix.getStackInSlot(i);
+				if(itemstack1.getItem().hasContainerItem())
+				{
+					ItemStack itemstack3 = new ItemStack(itemstack1.getItem().getContainerItem());
+					itemstack3.stackSize *= multiplier;
+					thePlayer.inventory.addItemStackToInventory(itemstack3);
+				} else if(itemstack2 != null && itemstack2.stackSize >= stacksizes[i])
+				{
+					thePlayer.inventory.addItemStackToInventory(itemstack2.copy());
+				}
+			}
+		}
 	}
 	
 	private List getRecipeItems(List recipes, InventoryPlayer inventory) throws NoSuchFieldException
@@ -403,10 +434,13 @@ public class ContainerClevercraft extends Container {
     	if(i < 40 && flag)
     	{
     		SlotClevercraft slot = (SlotClevercraft)inventorySlots.get(i);
-    		try{
-    			takeMaxRecipeItems(slot.irecipe, slot.collatedRecipe);
-    		} catch (NoSuchFieldException e) {
-    			e.printStackTrace();
+    		if(slot.getHasStack())
+    		{
+    			try{
+    				takeMaxRecipeItems(slot.irecipe, slot.collatedRecipe);
+    			} catch (NoSuchFieldException e) {
+    				e.printStackTrace();
+    			}
     		}
     		return null;
     	}

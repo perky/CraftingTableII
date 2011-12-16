@@ -10,7 +10,7 @@ public class BlockClevercraft extends Block implements ICraftingDescription {
 	{
 		super(i, Material.wood);
 		this.blockIndexInTexture = Block.workbench.blockIndexInTexture;
-		this.setBlockName("blockclevercraft");
+		this.setBlockName("craftingtableii");
 		toptexture = ModLoader.addOverride("/terrain.png", "/blockimage/clevercrafttop.png");
 	}
 	
