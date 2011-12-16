@@ -80,7 +80,7 @@ public class ContainerClevercraft extends Container {
 		{
 			try {
 				ItemStack itemstacks[] = getRecipeItemStackArray(slot.irecipe);
-				takeRecipeItems(itemstacks);
+				takeRecipeItems(itemstacks, 1);
 			} catch (NoSuchFieldException e) {
 				e.printStackTrace();
 			}
@@ -112,7 +112,7 @@ public class ContainerClevercraft extends Container {
 		}
 	}
 	
-	private void takeRecipeItems(ItemStack itemstacks[]) throws NoSuchFieldException
+	private void takeRecipeItems(ItemStack itemstacks[], int multiplier) throws NoSuchFieldException
 	{
 		for(int i = 0; i<9; i++)
 			craftMatrix.setInventorySlotContents(i, null);
@@ -123,7 +123,8 @@ public class ContainerClevercraft extends Container {
 			if(itemstack1 != null)
 			{
 				craftMatrix.setInventorySlotContents(n, itemstack1);	
-				int count = itemstack1.stackSize;
+				int count = multiplier;
+				
 				ItemStack itemstacks1[] = thePlayer.inventory.mainInventory;
 				for(int n1 = 0; n1 < itemstacks1.length; n1++)
 				{
@@ -131,7 +132,7 @@ public class ContainerClevercraft extends Container {
 					if(itemstack2 != null && itemstack2.itemID == itemstack1.itemID 
 							&& (itemstack2.getItemDamage() == itemstack1.getItemDamage() || itemstack1.getItemDamage() == -1))
 					{
-						if(itemstack2.stackSize >= count)
+						if(itemstack2.stackSize >= multiplier)
 						{
 							thePlayer.inventory.decrStackSize(n1, count);
 							count = 0;
@@ -153,7 +154,7 @@ public class ContainerClevercraft extends Container {
 		
 		int minStack = 9999;
 		boolean flag = true;
-		ItemStack recipeItems[] = new ItemStack[collatedRecipe.size()];
+		ItemStack recipeItems[] = getRecipeItemStackArray(irecipe);
 		for(int i = 0; i < recipeItems.length; i++)
 		{
 			ItemStack itemstack1 = recipeItems[i];
@@ -203,14 +204,7 @@ public class ContainerClevercraft extends Container {
 		}
 		
 		//Take items.
-		int i = 0;
-		for (Map.Entry<Integer, Integer[]> entry : collatedRecipe.entrySet())
-		{
-			int stacksize = entry.getValue()[0]*minStack;
-			recipeItems[i] = new ItemStack(entry.getKey(), stacksize, entry.getValue()[1]);
-			i++;
-		}
-		takeRecipeItems(recipeItems);
+		takeRecipeItems(recipeItems, minStack);
 		
 		//Send mod hooks.
 		ItemStack itemstack = new ItemStack(outputstack.itemID, outputstack.stackSize*minStack, outputstack.getItemDamage());

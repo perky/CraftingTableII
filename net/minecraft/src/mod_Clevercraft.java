@@ -128,7 +128,7 @@ public class mod_Clevercraft extends BaseModMp {
 
 	@Override
 	public String getVersion() {
-		return "1.4.1";
+		return "1.4.2";
 	}
 
 	@Override
