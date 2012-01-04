@@ -1,7 +1,22 @@
-package net.minecraft.src;
+package net.minecraft.craftingtableii;
 
 import java.util.*;
 
+import net.minecraft.src.Container;
+import net.minecraft.src.CraftingManager;
+import net.minecraft.src.EntityPlayer;
+import net.minecraft.src.IRecipe;
+import net.minecraft.src.InventoryCrafting;
+import net.minecraft.src.InventoryPlayer;
+import net.minecraft.src.ItemStack;
+import net.minecraft.src.MathHelper;
+import net.minecraft.src.ModLoader;
+import net.minecraft.src.ModLoaderMp;
+import net.minecraft.src.Packet230ModLoader;
+import net.minecraft.src.ShapedRecipes;
+import net.minecraft.src.ShapelessRecipes;
+import net.minecraft.src.Slot;
+import net.minecraft.src.mod_Clevercraft;
 import net.minecraft.src.forge.ForgeHooks;
 
 public class ContainerClevercraft extends Container {
@@ -12,22 +27,28 @@ public class ContainerClevercraft extends Container {
 	public List recipeList;
 	public List collatedRecipes;
 	public InventoryCrafting craftMatrix;
-	public GuiContainer gui;
+	public GuiClevercraft gui;
+	public ItemStack lastItemCrafted = null;
+	public IRecipe lastRecipeCrafted;
+	private boolean isMultiplayer;
+	private boolean isMuliplayer;
 	
-	public ContainerClevercraft(EntityPlayer entityplayer)
+	public ContainerClevercraft(InventoryPlayer inventoryplayer)
     {
 		itemList = new ArrayList();
-		thePlayer = entityplayer;
+		thePlayer = inventoryplayer.player;
 		recipeList = Collections.unmodifiableList(CraftingManager.getInstance().getRecipeList());
 		collatedRecipes = new ArrayList();
 		craftMatrix = new InventoryCrafting(this, 3, 3);
+		mod_Clevercraft.containerClevercraft = this;
 		
-		InventoryPlayer inventoryplayer = entityplayer.inventory;
+		isMultiplayer = ModLoader.getMinecraftInstance().theWorld.multiplayerWorld;
+		
         for(int l2 = 0; l2 < 5; l2++)
         {
             for(int j3 = 0; j3 < 8; j3++)
             {
-            	addSlot(new SlotClevercraft(GuiClevercraft.getInventory(), entityplayer, this, craftMatrix, j3 + l2 * 8, 8 + j3 * 18, 18 + l2 * 18));
+            	addSlot(new SlotClevercraft(GuiClevercraft.getInventory(), inventoryplayer.player, this, craftMatrix, j3 + l2 * 8, 8 + j3 * 18, 18 + l2 * 18));
             }
         }
 
@@ -48,18 +69,36 @@ public class ContainerClevercraft extends Container {
         func_35374_a(0.0F);
     }
 	
+	public void populateContainterWithDataInt(int[] dataInt)
+	{
+		System.out.println("populateContainterWithDataInt");
+		int j = 0;
+		for(int i = 0; i < dataInt.length; i += 3){
+			ItemStack itemstack = new ItemStack(dataInt[i], dataInt[i+1], dataInt[i+2]);
+			Slot slot = (Slot)inventorySlots.get(j);
+			j++;
+			
+			slot.putStack(itemstack);
+		}
+	}
+	
 	public void populateContainer()
 	{
+		if(isMultiplayer)
+			return;
+		
 		itemList.clear();
 		try {
 			recipes = getRecipeItems(recipeList, thePlayer.inventory);
 			Slot slot;
+			// Clear crafting slots.
 			for(int i = 0; i < this.inventorySlots.size(); i++)
 			{
 				slot = (Slot)this.inventorySlots.get(i);
 				if(slot instanceof SlotClevercraft)
 					slot.putStack(null);
 			}
+			// Add recipes.
 			for(int i = 0; i < recipes.size(); i++)
 			{
 				IRecipe irecipe = (IRecipe)recipes.get(i);
@@ -68,7 +107,6 @@ public class ContainerClevercraft extends Container {
 			//Update screen.
 			this.func_35374_a(0.0F);
 		} catch (NoSuchFieldException e) {
-			// TODO Auto-generated catch block
 			ModLoader.getLogger().warning("CleverCraft - NoSuchFieldException - Perhaps your minecraft version is incompatible.");
 			e.printStackTrace();
 		}
@@ -76,21 +114,28 @@ public class ContainerClevercraft extends Container {
 	
 	public void onPickupItem(ItemStack itemstack, SlotClevercraft slot)
 	{
+		if(isMuliplayer)
+			return;
+		
 		if(slot.irecipe != null)
 		{
 			try {
 				ItemStack itemstacks[] = getRecipeItemStackArray(slot.irecipe);
 				takeRecipeItems(itemstacks, 1);
+				mod_Clevercraft.addLastRecipeCrafted(slot.irecipe);
+				mod_Clevercraft.clevercraftInstance.sendRecipePacket(slot.irecipe, 1);
+				
 			} catch (NoSuchFieldException e) {
 				e.printStackTrace();
 			}
 		}
 		
 		onCraftingHook(itemstack, 1);
-		populateContainer();
         gui.updateScreen();
+        gui.resetScroll();
 	}
 	
+	//TODO: remove me!
 	private ItemStack[] getRecipeItemStackArray(IRecipe irecipe)
 	{
 		ItemStack itemstacks[];
@@ -203,20 +248,69 @@ public class ContainerClevercraft extends Container {
 			maxStackSize = outputstack.getMaxStackSize();
 		}
 		
-		//Take items.
-		takeRecipeItems(recipeItems, minStack);
-		
-		//Send mod hooks.
-		ItemStack itemstack = new ItemStack(outputstack.itemID, outputstack.stackSize*minStack, outputstack.getItemDamage());
-		onCraftingHook(itemstack, minStack);
-		
 		//Add item to inventory.
-		thePlayer.inventory.addItemStackToInventory(itemstack);
+		ItemStack itemstack = new ItemStack(outputstack.itemID, outputstack.stackSize*minStack, outputstack.getItemDamage());
+		boolean canAddItemStack = canAddItemStackToPlayerInventory(itemstack, thePlayer.inventory);
+		
+		//if item was added.
+		if(canAddItemStack) {
+			// Add the item.
+			thePlayer.inventory.addItemStackToInventory(itemstack);
+			// Take recipe items.
+			takeRecipeItems(recipeItems, minStack);
+			//Send mod hooks.
+			onCraftingHook(itemstack, minStack);
+		}
 		
 		//Update container and gui.
 		populateContainer();
 		gui.updateScreen();
 	}
+	
+	private boolean canAddItemStackToPlayerInventory(ItemStack itemstack, InventoryPlayer inventory) {
+		int emptySlot = getFirstEmptyStack(inventory);
+		
+		if(!itemstack.isItemDamaged())
+        {
+			if(itemstack.getMaxStackSize() == 1)
+	        {
+	            if(emptySlot < 0)
+	            {
+	                return false;
+	            } else {
+	            	return true;
+	            }
+	        }
+	        
+	        for(int i = 0; i < inventory.mainInventory.length; i++)
+	        {
+	        	ItemStack itemstack1 = inventory.getStackInSlot(i);
+	        	if(itemstack1 != null && itemstack1.itemID == itemstack.itemID 
+	        			&& itemstack1.getItemDamage() == itemstack.getItemDamage()
+	        			&& (itemstack1.stackSize + itemstack.stackSize) < itemstack1.getMaxStackSize() ) {
+	        		return true;
+	        	}
+	        }
+        }
+		
+		if(emptySlot >= 0)
+        	return true;
+		
+		return false;
+	}
+
+	private int getFirstEmptyStack(InventoryPlayer inventory)
+    {
+        for(int i = 0; i < inventory.mainInventory.length; i++)
+        {
+            if(inventory.mainInventory[i] == null)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 	
 	public void onCraftingHook(ItemStack itemstack, int multiplier)
 	{
@@ -258,7 +352,26 @@ public class ContainerClevercraft extends Container {
 		ArrayList craftableRecipes = new ArrayList<IRecipe>();
 		collatedRecipes.clear();
 		boolean canCraft;
-		for(int n = 0; n < recipes.size(); n++)
+		
+		// Add last item crafted.
+		int j = 0;
+		for(int n = 0; n < mod_Clevercraft.numberOfLastRecipesCrafted; n++) {
+			Map<Integer, Integer[]> collatedRecipe = new HashMap<Integer, Integer[]>();
+			IRecipe recipe = mod_Clevercraft.lastRecipesCrafted[n];
+			if(recipe instanceof ShapelessRecipes && canCraftShapelessRecipe(recipe, inventory, collatedRecipe))
+            {
+            	craftableRecipes.add(recipe);
+            	collatedRecipes.add(collatedRecipe);
+            } else if(recipe instanceof ShapedRecipes && canCraftShapedRecipe(recipe, inventory, collatedRecipe))
+            {
+            	craftableRecipes.add(recipe);
+            	collatedRecipes.add(collatedRecipe);
+            }
+			j++;
+		}
+		
+		// Add all other craftable recipes.
+		for(int n = j; n < recipes.size(); n++)
         {
             IRecipe irecipe = (IRecipe)recipes.get(n);
             //ArrayList collatedRecipe = new ArrayList();
@@ -267,12 +380,10 @@ public class ContainerClevercraft extends Container {
             {
             	craftableRecipes.add(irecipe);
             	collatedRecipes.add(collatedRecipe);
-            	//System.out.println("You can shapeless craft: "+irecipe.getRecipeOutput().toString());
             } else if(irecipe instanceof ShapedRecipes && canCraftShapedRecipe(irecipe, inventory, collatedRecipe))
             {
             	craftableRecipes.add(irecipe);
             	collatedRecipes.add(collatedRecipe);
-            	//System.out.println("You can shaped craft: "+irecipe.getRecipeOutput().toString());
             }
         }
 		
@@ -375,7 +486,6 @@ public class ContainerClevercraft extends Container {
 	
 	@Override
 	public boolean canInteractWith(EntityPlayer entityplayer) {
-		// TODO Auto-generated method stub
 		return true;
 	}
 
@@ -425,7 +535,9 @@ public class ContainerClevercraft extends Container {
     	// i: Slot number.
     	// j: Mouse buttons, 0 = left, 1 = right.
     	// flag: Shift button down.
-    	if(i < 40 && flag)
+    	if(j == 1 && inventorySlots.get(i) instanceof SlotClevercraft)
+    		return null;
+    	if(i < 40 && flag && !isMultiplayer)
     	{
     		SlotClevercraft slot = (SlotClevercraft)inventorySlots.get(i);
     		if(slot.getHasStack())

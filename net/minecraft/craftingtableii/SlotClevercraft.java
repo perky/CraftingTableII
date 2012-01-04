@@ -1,8 +1,16 @@
-package net.minecraft.src;
+package net.minecraft.craftingtableii;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import net.minecraft.src.AchievementList;
+import net.minecraft.src.Block;
+import net.minecraft.src.EntityPlayer;
+import net.minecraft.src.IInventory;
+import net.minecraft.src.IRecipe;
+import net.minecraft.src.Item;
+import net.minecraft.src.ItemStack;
+import net.minecraft.src.Slot;
 import net.minecraft.src.forge.ForgeHooks;
 
 public class SlotClevercraft extends Slot {
@@ -25,6 +33,11 @@ public class SlotClevercraft extends Slot {
     {
         return false;
     }
+	
+	public Map<Integer, Integer[]> getCollatedRecipe()
+	{
+		return collatedRecipe;
+	}
 	
 	public void onPickupFromSlot(ItemStack itemstack)
     {

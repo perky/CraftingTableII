@@ -1,12 +1,18 @@
 package net.minecraft.src;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
-import java.util.regex.*;
+import java.util.Map;
+
+import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.craftingtableii.BlockClevercraft;
+import net.minecraft.craftingtableii.ContainerClevercraft;
+import net.minecraft.craftingtableii.GuiClevercraft;
+import net.minecraft.craftingtableii.RenderCraftingTableII;
 import net.minecraft.src.forge.ICraftingHandler;
 import net.minecraft.src.forge.MinecraftForge;
 import au.com.bytecode.opencsv.CSVReader;
@@ -17,43 +23,75 @@ public class mod_Clevercraft extends BaseModMp {
 	@MLProp public static int guiIDCraftingTableII = 235;
 	@MLProp public static boolean shouldShowDescriptions = true;
 	
-	public static List itemDescriptions2;
 	public static Block blockClevercraft;
-	private static final File descriptionDir = new File(Minecraft.getMinecraftDir(), "/config/itemdescriptions/");
-	private static final File vanillaCsv = new File(Minecraft.getMinecraftDir(), "/config/itemdescriptions/vanilla.csv");
+	public static Class<?> guiDescriptions;
+	public static IRecipe[] lastRecipesCrafted;
+	public static int numberOfLastRecipesCrafted;
+	public static int craftingTableModelID;
+	
+	public static mod_Clevercraft clevercraftInstance;
+	public static ContainerClevercraft containerClevercraft;
 	
 	public mod_Clevercraft() {
+		
+		clevercraftInstance = this;
+		
+		craftingTableModelID = ModLoader.getUniqueBlockModelID(this, true);
+		lastRecipesCrafted = new IRecipe[8];
+		numberOfLastRecipesCrafted = 0;
+		
+		try{
+			Field[] ff = GuiContainer.class.getFields();
+			for(int i = 0; i < ff.length; i++)
+			{
+				if(ff[i].getName().equalsIgnoreCase("itemDescriptionsEnabled"))
+					shouldShowDescriptions = false;
+			}
+		} catch(Exception e){}
+		
 		initBlocks();
+		
 		ModLoader.RegisterBlock(blockClevercraft);
 		ModLoader.AddName(blockClevercraft, "Crafting Table II");
 		ModLoader.AddShapelessRecipe(new ItemStack(blockClevercraft, 1), new Object[]{
 			Block.workbench, Item.book
 		});
+		
+		// Setup block render.
+		RenderCraftingTableII render = new RenderCraftingTableII();
+		ModLoader.RegisterTileEntity(net.minecraft.craftingtableii.TileEntityCraftingTableII.class, "craftingtableII", render);
 
 		ModLoaderMp.RegisterGUI(this, guiIDCraftingTableII);
 		
-		try{
-			CSVReader reader = new CSVReader(new FileReader(vanillaCsv));
-			itemDescriptions2 = reader.readAll();
-			ModLoader.getLogger().fine("Vanilla.csv descriptions loaded");
-			
-			File file[] = descriptionDir.listFiles();
-			for(int i = 0; i < file.length; i++)
-			{
-				File file1 = file[i];
-				
-				if(!file1.getName().equalsIgnoreCase("vanilla.csv") && file1.getName().endsWith(".csv"))
-				{
-					System.out.println(file1.getName());
-					reader = new CSVReader(new FileReader(file1));
-					itemDescriptions2.addAll(reader.readAll());
-					ModLoader.getLogger().fine(file1.getName()+" descriptions loaded");
-				}
-			}
-		} catch(Exception e){
+		try {
+			guiDescriptions = Class.forName("net.minecraft.src.GuiItemDescriptions");
+		} catch (Exception e) {
+			shouldShowDescriptions = false;
 			e.printStackTrace();
 		}
 		
+	}
+	
+	public void sendRecipePacket(IRecipe recipe, int amount)
+	{
+		int[] dataInt = new int[2];
+		dataInt[0] = amount;
+		dataInt[1] = recipe.getRecipeOutput().itemID;
+		
+		Packet230ModLoader packet = new Packet230ModLoader();
+		packet.dataInt = dataInt;
+		packet.packetType = 0;
+		ModLoaderMp.SendPacket(this, packet);
+	}
+	
+	public void HandlePacket(Packet230ModLoader packet)
+	{
+		switch(packet.packetType){
+		case 0:
+			if(packet.dataInt != null && packet.dataInt.length > 0 && containerClevercraft != null)
+				containerClevercraft.populateContainterWithDataInt(packet.dataInt);
+			break;
+		}
 	}
 	
 	public static void initBlocks()
@@ -68,67 +106,65 @@ public class mod_Clevercraft extends BaseModMp {
             else return null;
     }
 	
-	
-	private static Pattern descriptionPattern = Pattern.compile("(.*\\..*)\\.(.*)\\.(.*)");
-	private static Pattern rangePattern = Pattern.compile("([0-9]*)-([0-9]*)");
-	private static Matcher matcher;
-	private static Matcher matcher1;
-	private static String lastItemName;
-	private static String lastItemDescription;
-	private static int lastDataVal;
-	
-	public static String getItemDescription(String itemName, int dataval)
-	{
-		if(itemDescriptions2 == null || itemDescriptions2.size() == 0)
-			return "";
-		
-		if(lastItemName != null && itemName == lastItemName && dataval == lastDataVal)
-		{
-			return lastItemDescription;
+	public void RenderInvBlock(RenderBlocks renderblocks, Block block, int i, int j)
+    {
+		if(block.getRenderType() == craftingTableModelID) {
+			Tessellator tessellator = Tessellator.instance;
+			block.setBlockBoundsForItemRender();
+            GL11.glTranslatef(-0.5F, -0.5F, -0.5F);
+            tessellator.startDrawingQuads();
+            tessellator.setNormal(0.0F, -1F, 0.0F);
+            renderblocks.renderBottomFace(block, 0.0D, 0.0D, 0.0D, block.getBlockTextureFromSideAndMetadata(0, i));
+            tessellator.draw();
+            tessellator.startDrawingQuads();
+            tessellator.setNormal(0.0F, 1.0F, 0.0F);
+            renderblocks.renderTopFace(block, 0.0D, 0.0D, 0.0D, block.getBlockTextureFromSideAndMetadata(1, i));
+            tessellator.draw();
+            tessellator.startDrawingQuads();
+            tessellator.setNormal(0.0F, 0.0F, -1F);
+            renderblocks.renderEastFace(block, 0.0D, 0.0D, 0.0D, block.getBlockTextureFromSideAndMetadata(2, i));
+            tessellator.draw();
+            tessellator.startDrawingQuads();
+            tessellator.setNormal(0.0F, 0.0F, 1.0F);
+            renderblocks.renderWestFace(block, 0.0D, 0.0D, 0.0D, block.getBlockTextureFromSideAndMetadata(3, i));
+            tessellator.draw();
+            tessellator.startDrawingQuads();
+            tessellator.setNormal(-1F, 0.0F, 0.0F);
+            renderblocks.renderNorthFace(block, 0.0D, 0.0D, 0.0D, block.getBlockTextureFromSideAndMetadata(4, i));
+            tessellator.draw();
+            tessellator.startDrawingQuads();
+            tessellator.setNormal(1.0F, 0.0F, 0.0F);
+            renderblocks.renderSouthFace(block, 0.0D, 0.0D, 0.0D, block.getBlockTextureFromSideAndMetadata(5, i));
+            tessellator.draw();
+            GL11.glTranslatef(0.5F, 0.5F, 0.5F);
 		}
-		
-		for(int i = 0; i < itemDescriptions2.size(); i++)
-		{
-			String entry[] = (String[])itemDescriptions2.get(i);
-			if(entry.length >= 3)
-			{
-				matcher = descriptionPattern.matcher(entry[0]);
-				while (matcher.find()) {
-					if(matcher.group(1).equalsIgnoreCase(itemName) && matcher.group(3).equalsIgnoreCase("1"))
-					{
-						matcher1 = rangePattern.matcher(matcher.group(2));
-						while(matcher1.find()) {
-							int low = Integer.parseInt(matcher1.group(1));
-							int high = Integer.parseInt(matcher1.group(2));
-							if(dataval >= low && dataval <= high)
-							{
-								lastItemName = itemName;
-								lastDataVal = dataval;
-								lastItemDescription = entry[2];
-								return entry[2];
-							}
-						}
-						
-						if(matcher.group(2).equalsIgnoreCase(Integer.toString(dataval)) || matcher.group(2).equalsIgnoreCase("*"))
-						{
-							lastItemName = itemName;
-							lastDataVal = dataval;
-							lastItemDescription = entry[2];
-							return entry[2];
-						} else {
-							break;
-						}
-					}
-				}
+    }
+	
+	public static void addLastRecipeCrafted(IRecipe recipe) {
+		//Check if recipe is already in list.
+		for(int i = 0; i < 8; i++) {
+			IRecipe recipe1 = lastRecipesCrafted[i];
+			if(recipe1 != null && recipe1.equals(recipe)){
+				return;
 			}
 		}
 		
-		return "";
+		for(int i = 6; i >= 0; i--) {
+			IRecipe recipe1 = lastRecipesCrafted[i];
+			if(recipe1 != null) {
+				lastRecipesCrafted[i+1] = recipe1;
+			}
+		}
+		
+		lastRecipesCrafted[0] = recipe;
+		numberOfLastRecipesCrafted++;
+		if(numberOfLastRecipesCrafted > 8)
+			numberOfLastRecipesCrafted = 8;
 	}
 
 	@Override
 	public String getVersion() {
-		return "1.4.2";
+		return "1.6";
 	}
 
 	@Override
