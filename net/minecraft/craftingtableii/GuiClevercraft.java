@@ -9,6 +9,7 @@ import net.minecraft.src.IGuiItemDescription;
 import net.minecraft.src.InventoryBasic;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.Slot;
+import net.minecraft.src.World;
 import net.minecraft.src.mod_Clevercraft;
 
 import org.lwjgl.input.Mouse;
@@ -16,21 +17,20 @@ import org.lwjgl.opengl.GL11;
 
 public class GuiClevercraft extends GuiContainer {
 	
-	private static InventoryBasic inventory = new InventoryBasic("tmp", 72);
 	private float field_35312_g;
     private boolean field_35313_h;
     private boolean field_35314_i;
     private boolean shouldShowDescriptions;
     private IGuiItemDescription guiItemDescriptions;
     
-	public GuiClevercraft(EntityPlayer entityplayer)
+	public GuiClevercraft(EntityPlayer entityplayer, World world)
     {
-        super(new ContainerClevercraft(entityplayer.inventory));
-        ((ContainerClevercraft)inventorySlots).gui = this;
+        super( new ContainerClevercraft(entityplayer.inventory, world) );
         field_35312_g = 0.0F;
         field_35313_h = false;
         allowUserInput = true;
         shouldShowDescriptions = mod_Clevercraft.shouldShowDescriptions;
+        entityplayer.craftingInventory = inventorySlots;
         ySize = 208;
         
         if(shouldShowDescriptions)
@@ -54,26 +54,19 @@ public class GuiClevercraft extends GuiContainer {
     		guiItemDescriptions.setSize(xSize, ySize);
     }
 	
+	
+	// Slot pressed?
+	/*
 	protected void func_35309_a(Slot slot, int i, int j, boolean flag)
 	{
 		super.func_35309_a(slot, i, j, flag);
-		if(slot != null)
-		{
-			ItemStack itemstack1 = mc.thePlayer.inventory.getItemStack();
-			ItemStack itemstack2 = slot.getStack();
-			if(slot.inventory != inventory)
-			{
-				ContainerClevercraft container = (ContainerClevercraft)inventorySlots;
-				container.populateContainer();
-				this.updateScreen();
-			}
-		}
-	}
-	
-	static InventoryBasic getInventory()
-    {
-        return inventory;
-    }
+		ContainerClevercraft container = (ContainerClevercraft)inventorySlots;
+		if(slot.inventory == container.visibleRecipes)
+			inventorySlots.slotClick(slot.slotNumber, j, flag, mc.thePlayer);
+		else
+			container.populateSlotsWithRecipes();
+		//updateScreen();
+	}*/
 	
 	public void drawScreen(int i, int j, float f)
     {
@@ -105,7 +98,7 @@ public class GuiClevercraft extends GuiContainer {
             {
                 field_35312_g = 1.0F;
             }
-            ((ContainerClevercraft)inventorySlots).func_35374_a(field_35312_g);
+            //((ContainerClevercraft)inventorySlots).updateVisibleSlots(field_35312_g);
         }
         super.drawScreen(i, j, f);
         //----
@@ -126,7 +119,7 @@ public class GuiClevercraft extends GuiContainer {
                 	if(slot1 instanceof SlotClevercraft) {
                 		SlotClevercraft slotclever = (SlotClevercraft)slot1;
                 		guiItemDescriptions.drawDescriptions(i, j, slot1.getStack(), false);
-                    	guiItemDescriptions.displayCollatedRecipe(i, j, slotclever.getCollatedRecipe());
+                    	//guiItemDescriptions.displayCollatedRecipe(i, j, slotclever.getCollatedRecipe());
                     	break;
                 	} else {
                 		guiItemDescriptions.drawDescriptions(i, j, slot1.getStack(), true);
@@ -174,9 +167,10 @@ public class GuiClevercraft extends GuiContainer {
     {
         super.handleMouseInput();
         int i = Mouse.getEventDWheel();
+        ContainerClevercraft container = (ContainerClevercraft)inventorySlots;
         if(i != 0)
         {
-            int j = (((ContainerClevercraft)inventorySlots).itemList.size() / 8 - 5) + 1;
+            int j = (container.craftableRecipes.getSize() / 8 - 4) + 1;
             if(i > 0)
             {
                 i = 1;
@@ -194,13 +188,13 @@ public class GuiClevercraft extends GuiContainer {
             {
                 field_35312_g = 1.0F;
             }
-            ((ContainerClevercraft)inventorySlots).func_35374_a(field_35312_g);
+            container.updateVisibleSlots(field_35312_g);
         }
     }
     
     public void resetScroll()
 	{
 		field_35312_g = 0.0F;
-		((ContainerClevercraft)inventorySlots).func_35374_a(field_35312_g);
+		((ContainerClevercraft)inventorySlots).updateVisibleSlots(field_35312_g);
 	}
 }

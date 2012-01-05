@@ -10,40 +10,41 @@ import net.minecraft.src.IInventory;
 import net.minecraft.src.IRecipe;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
+import net.minecraft.src.ModLoader;
 import net.minecraft.src.Slot;
 import net.minecraft.src.forge.ForgeHooks;
 
 public class SlotClevercraft extends Slot {
 	
 	private EntityPlayer thePlayer;
-	private ContainerClevercraft delegate;
 	public IInventory craftMatrix;
-	public IRecipe irecipe;
-	public Map<Integer, Integer[]> collatedRecipe;
+	private IRecipe irecipe;
 	
-	public SlotClevercraft(IInventory iinventory, EntityPlayer entityplayer, ContainerClevercraft container, IInventory matrix, int i, int j, int k)
+	public SlotClevercraft(EntityPlayer entityplayer, IInventory craftableRecipes, IInventory matrix, int i, int j, int k)
     {
-        super(iinventory, i, j, k);
+        super(craftableRecipes, i, j, k);
         thePlayer = entityplayer;
-        delegate = container;
         craftMatrix = matrix;
     }
+	
+	public void setIRecipe(IRecipe theIRecipe)
+	{
+		irecipe = theIRecipe;
+	}
+	
+	public IRecipe getIRecipe()
+	{
+		return irecipe;
+	}
 	
 	public boolean isItemValid(ItemStack itemstack)
     {
         return false;
     }
 	
-	public Map<Integer, Integer[]> getCollatedRecipe()
-	{
-		return collatedRecipe;
-	}
-	
 	public void onPickupFromSlot(ItemStack itemstack)
     {
 		itemstack.onCrafting(thePlayer.worldObj, thePlayer);
-		delegate.onPickupItem(itemstack, this);
-		
         
         if(itemstack.itemID == Block.workbench.blockID)
         {

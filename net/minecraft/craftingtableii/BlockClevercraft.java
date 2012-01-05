@@ -65,7 +65,7 @@ public class BlockClevercraft extends BlockContainer implements ICraftingDescrip
 	{
 		if(!world.multiplayerWorld)
 		{
-			ModLoader.OpenGUI(entityplayer, new GuiClevercraft(entityplayer));
+			ModLoader.OpenGUI(entityplayer, new GuiClevercraft(entityplayer, world));
 		}
 		return true;
 	}

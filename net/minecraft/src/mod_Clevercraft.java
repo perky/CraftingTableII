@@ -29,8 +29,10 @@ public class mod_Clevercraft extends BaseModMp {
 	public static int numberOfLastRecipesCrafted;
 	public static int craftingTableModelID;
 	
-	public static mod_Clevercraft clevercraftInstance;
-	public static ContainerClevercraft containerClevercraft;
+	private static mod_Clevercraft clevercraftInstance;
+	private static ContainerClevercraft containerClevercraft;
+	
+	public static final int kPacketTypeCraftingRequest = 0;
 	
 	public mod_Clevercraft() {
 		
@@ -72,24 +74,28 @@ public class mod_Clevercraft extends BaseModMp {
 		
 	}
 	
-	public void sendRecipePacket(IRecipe recipe, int amount)
+	public static mod_Clevercraft getInstance()
 	{
-		int[] dataInt = new int[2];
-		dataInt[0] = amount;
-		dataInt[1] = recipe.getRecipeOutput().itemID;
+		return clevercraftInstance;
+	}
+	
+	public void sendCraftingRequestPacket(ItemStack itemstack)
+	{
+		int[] dataInt = new int[3];
+		dataInt[0] = itemstack.itemID;
+		dataInt[1] = itemstack.stackSize;
+		dataInt[2] = itemstack.getItemDamage();
 		
 		Packet230ModLoader packet = new Packet230ModLoader();
 		packet.dataInt = dataInt;
-		packet.packetType = 0;
+		packet.packetType = kPacketTypeCraftingRequest;
 		ModLoaderMp.SendPacket(this, packet);
 	}
 	
 	public void HandlePacket(Packet230ModLoader packet)
 	{
 		switch(packet.packetType){
-		case 0:
-			if(packet.dataInt != null && packet.dataInt.length > 0 && containerClevercraft != null)
-				containerClevercraft.populateContainterWithDataInt(packet.dataInt);
+		case kPacketTypeCraftingRequest:
 			break;
 		}
 	}
@@ -102,8 +108,12 @@ public class mod_Clevercraft extends BaseModMp {
 	public GuiScreen HandleGUI(int inventoryType) 
     {
             if(inventoryType == guiIDCraftingTableII)
-                    return new GuiClevercraft( ModLoader.getMinecraftInstance().thePlayer );
-            else return null;
+                    return new GuiClevercraft( 
+                    		ModLoader.getMinecraftInstance().thePlayer,
+                    		ModLoader.getMinecraftInstance().theWorld
+                    );
+            else
+            	return null;
     }
 	
 	public void RenderInvBlock(RenderBlocks renderblocks, Block block, int i, int j)
