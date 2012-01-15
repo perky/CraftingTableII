@@ -62,7 +62,7 @@ public class ContainerClevercraft extends Container {
             addSlot(new Slot(inventoryplayer, i3, 8 + i3 * 18, 184));
         }
         
-        if(!world.multiplayerWorld)
+        //if(!worldObj.multiplayerWorld)
         	populateSlotsWithRecipes();
 	}
 	
@@ -80,8 +80,6 @@ public class ContainerClevercraft extends Container {
 		// has the necessary ingredient.
 		for(int i = 0; i < recipeList.size(); i++) {
 			IRecipe irecipe = (IRecipe)recipeList.get(i);
-			if(irecipe.getRecipeOutput().itemID == Block.planks.blockID)
-				System.out.println("wooden planks");
 			// Copy the recipe ingredients into an ItemStack array.
 			ItemStack[] recipeIngredients = getRecipeIngredients(irecipe);
 			// Check if the player has the required ingredients.
@@ -95,6 +93,7 @@ public class ContainerClevercraft extends Container {
 					continue;
 				
 				ItemStack itemstack = recipeIngredients[i1];
+				itemstack.stackSize = 1;
 				int slotindex = getFirstInventoryPlayerSlotWithItemStack(tempPlayerInventory, itemstack);
 				if(slotindex != -1) {
 					tempPlayerInventory.decrStackSize(slotindex, itemstack.stackSize);
@@ -206,7 +205,8 @@ public class ContainerClevercraft extends Container {
 				return null;
 			} else if(shiftIsDown) {
 				onRequestMaximumRecipeOutput( (SlotClevercraft)inventorySlots.get(slotIndex) );
-				populateSlotsWithRecipes();
+				//if(!worldObj.multiplayerWorld)
+					populateSlotsWithRecipes();
 				return null;
 			} else {
 				onRequestSingleRecipeOutput( (SlotClevercraft)inventorySlots.get(slotIndex) );
@@ -214,7 +214,8 @@ public class ContainerClevercraft extends Container {
 		}
 		
 		ItemStack itemstack = super.slotClick(slotIndex, mouseButton, shiftIsDown, entityplayer);
-		populateSlotsWithRecipes();
+		//if(!worldObj.multiplayerWorld)
+			populateSlotsWithRecipes();
 		
 		return itemstack; 
     }
@@ -225,11 +226,14 @@ public class ContainerClevercraft extends Container {
 		IRecipe irecipe = slot.getIRecipe();
 		if(irecipe == null)
 			return;
-		ItemStack recipeOutputStack = irecipe.getRecipeOutput();
+		ItemStack recipeOutputStack = irecipe.getRecipeOutput().copy();
 		
 		// Send request packet if multiplayer.
 		if(worldObj.multiplayerWorld) {
-			mod_Clevercraft.getInstance().sendCraftingRequestPacket(recipeOutputStack);
+			mod_Clevercraft.getInstance().sendCraftingRequestPacket(recipeOutputStack, false);
+			onCraftMatrixChanged(recipeOutputStack);
+			thePlayer.inventory.setItemStack(null);
+			return;
 		} else {
 			// Take the necesarry ingredients from the player.
 			InventoryPlayer inventoryPlayer = thePlayer.inventory;
@@ -245,17 +249,26 @@ public class ContainerClevercraft extends Container {
 						// Transfer the items in the player's inventory to the craft matrix.
 						craftMatrix.setInventorySlotContents(i, recipeIngredient.copy());
 						inventoryPlayer.decrStackSize(i1, 1);
+						break;
 					}
 				}
 			}
+			
+			onCraftMatrixChanged(recipeOutputStack);
 		}
-		
-		onCraftMatrixChanged(recipeOutputStack);
 	}
 	
 	private void onRequestMaximumRecipeOutput( SlotClevercraft slot )
-	{
+	{	
 		IRecipe irecipe = slot.getIRecipe();
+		if(irecipe == null)
+			return;
+		
+		if(worldObj.multiplayerWorld) {
+			mod_Clevercraft.getInstance().sendCraftingRequestPacket(slot.getIRecipe().getRecipeOutput(), true);
+			return;
+		}
+		
 		List collatedRecipe = new ArrayList();
 		ItemStack[] recipeIngredients = getRecipeIngredients(irecipe);
 		InventoryPlayer inventoryPlayer = thePlayer.inventory;
@@ -265,15 +278,23 @@ public class ContainerClevercraft extends Container {
 		for(int i = 0; i < recipeIngredients.length; i++) {
 			ItemStack recipeIngredient = recipeIngredients[i];
 			if(recipeIngredient != null) {
+				recipeIngredient.stackSize = 1;
 				if(recipeIngredient.getMaxStackSize() == 1)
 					minimumOutputStackSize = 1;
-				for(int i1 = 0; i1 < collatedRecipe.size(); i1++) {
-					ItemStack itemstack1 = (ItemStack)collatedRecipe.get(i);
-					if(itemstack1 != null && itemstack1.isItemEqual(recipeIngredient)) {
-						itemstack1.stackSize += recipeIngredient.stackSize;
-					} else if(itemstack1 == null) {
-						collatedRecipe.set(i1, recipeIngredient);
+				if(collatedRecipe.size() == 0) {
+					collatedRecipe.add(recipeIngredient);
+				} else {
+					boolean didUpdate = false;
+					for(int i1 = 0; i1 < collatedRecipe.size(); i1++) {
+						ItemStack itemstack1 = (ItemStack)collatedRecipe.get(i1);
+						if(itemstack1 != null && itemstack1.isItemEqual(recipeIngredient)) {
+							itemstack1.stackSize += recipeIngredient.stackSize;
+							didUpdate = true;
+							break;
+						}
 					}
+					if(!didUpdate)
+						collatedRecipe.add(recipeIngredient);
 				}
 			}
 		}
@@ -302,39 +323,33 @@ public class ContainerClevercraft extends Container {
 		
 		
 		// Add output to the players inventory.
-		ItemStack recipeOutputStack = irecipe.getRecipeOutput();
+		ItemStack recipeOutputStack = irecipe.getRecipeOutput().copy();
 		recipeOutputStack.stackSize *= minimumOutputStackSize;
-		
-		// TODO: change to sendCraftMaximumRequestPacket()
-		if(worldObj.multiplayerWorld) {
-			mod_Clevercraft.getInstance().sendCraftingRequestPacket(recipeOutputStack);
-			return;
-		}
 		
 		inventoryPlayer.addItemStackToInventory(recipeOutputStack);
 		
 		// Transfer necessary items from player to craft matrix.
 		for(int i = 0; i < recipeIngredients.length; i++) {
 			ItemStack recipeIngredient = recipeIngredients[i];
+			
 			if(recipeIngredient != null) {
-				int stackSize = recipeIngredient.stackSize * minimumOutputStackSize;
-				int itemid = recipeIngredient.itemID;
-				int damageval = recipeIngredient.getItemDamage();
-				for(int i1 = 0; i1 < inventoryPlayer.getSizeInventory(); i1++) {
-					ItemStack itemstack = inventoryPlayer.getStackInSlot(i1);
-					if(itemstack != null && itemstack.itemID == itemid 
-							&& (itemstack.getItemDamage() == damageval || damageval == -1)) {
-						if(itemstack.stackSize >= stackSize) {
-							ItemStack craftMatrixItemStack = new ItemStack(recipeIngredient.itemID, 
-									recipeIngredient.stackSize * minimumOutputStackSize, 
-									recipeIngredient.getItemDamage());
-							craftMatrix.setInventorySlotContents(i, craftMatrixItemStack);
-							inventoryPlayer.decrStackSize(i1, stackSize);
-							stackSize = 0;
+				recipeIngredient.stackSize = 1;
+				craftMatrix.setInventorySlotContents(i, recipeIngredient);
+				int count = minimumOutputStackSize;
+				
+				ItemStack[] playerMainInventory = inventoryPlayer.mainInventory;
+				for(int i1 = 0; i1 < playerMainInventory.length; i1++) {
+					ItemStack itemstack = playerMainInventory[i1];
+					int dmg = recipeIngredient.getItemDamage();
+					if(itemstack != null && itemstack.itemID == recipeIngredient.itemID
+							&& (itemstack.getItemDamage() == dmg || dmg == -1)) {
+						if(itemstack.stackSize >= count) {
+							inventoryPlayer.decrStackSize(i1, count);
+							count = 0;
 							break;
 						} else {
-							stackSize -= itemstack.stackSize;
-							inventoryPlayer.setInventorySlotContents(i1, null);
+							count -= itemstack.stackSize;
+							inventoryPlayer.decrStackSize(i1, itemstack.stackSize);
 						}
 					}
 				}

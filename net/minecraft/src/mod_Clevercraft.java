@@ -32,7 +32,8 @@ public class mod_Clevercraft extends BaseModMp {
 	private static mod_Clevercraft clevercraftInstance;
 	private static ContainerClevercraft containerClevercraft;
 	
-	public static final int kPacketTypeCraftingRequest = 0;
+	public static final int kPacketTypeSingleCraftingRequest = 0;
+	public static final int kPacketTypeMaximumCraftingRequest = 1;
 	
 	public mod_Clevercraft() {
 		
@@ -79,7 +80,7 @@ public class mod_Clevercraft extends BaseModMp {
 		return clevercraftInstance;
 	}
 	
-	public void sendCraftingRequestPacket(ItemStack itemstack)
+	public void sendCraftingRequestPacket(ItemStack itemstack, boolean isMaximum)
 	{
 		int[] dataInt = new int[3];
 		dataInt[0] = itemstack.itemID;
@@ -88,16 +89,16 @@ public class mod_Clevercraft extends BaseModMp {
 		
 		Packet230ModLoader packet = new Packet230ModLoader();
 		packet.dataInt = dataInt;
-		packet.packetType = kPacketTypeCraftingRequest;
+		if(isMaximum)
+			packet.packetType = kPacketTypeMaximumCraftingRequest;
+		else
+			packet.packetType = kPacketTypeSingleCraftingRequest;
 		ModLoaderMp.SendPacket(this, packet);
 	}
 	
 	public void HandlePacket(Packet230ModLoader packet)
 	{
-		switch(packet.packetType){
-		case kPacketTypeCraftingRequest:
-			break;
-		}
+		
 	}
 	
 	public static void initBlocks()

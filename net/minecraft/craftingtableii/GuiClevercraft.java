@@ -33,6 +33,8 @@ public class GuiClevercraft extends GuiContainer {
         entityplayer.craftingInventory = inventorySlots;
         ySize = 208;
         
+        ((ContainerClevercraft)inventorySlots).updateVisibleSlots(0.0F);
+        
         if(shouldShowDescriptions)
         {
         	try{
@@ -54,9 +56,15 @@ public class GuiClevercraft extends GuiContainer {
     		guiItemDescriptions.setSize(xSize, ySize);
     }
 	
+	@Override
+	protected void func_35309_a(Slot slot, int i, int j, boolean flag)
+    {
+        inventorySlots.slotClick(i, j, flag, mc.thePlayer);
+    }
 	
 	// Slot pressed?
 	/*
+	
 	protected void func_35309_a(Slot slot, int i, int j, boolean flag)
 	{
 		super.func_35309_a(slot, i, j, flag);
@@ -116,15 +124,9 @@ public class GuiClevercraft extends GuiContainer {
                 
                 if(slot1.getStack() != null && slot1.getStack().getItem() != null && getIsMouseOverSlot(slot1, i, j))
             	{
-                	if(slot1 instanceof SlotClevercraft) {
-                		SlotClevercraft slotclever = (SlotClevercraft)slot1;
-                		guiItemDescriptions.drawDescriptions(i, j, slot1.getStack(), false);
-                    	//guiItemDescriptions.displayCollatedRecipe(i, j, slotclever.getCollatedRecipe());
-                    	break;
-                	} else {
+                		//SlotClevercraft slotclever = (SlotClevercraft)slot1;
                 		guiItemDescriptions.drawDescriptions(i, j, slot1.getStack(), true);
-                    	break;
-                	}	
+                    	//guiItemDescriptions.displayCollatedRecipe(i, j, slotclever.getCollatedRecipe());
             	}
             }
         	

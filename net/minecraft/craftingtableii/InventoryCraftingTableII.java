@@ -27,7 +27,6 @@ public class InventoryCraftingTableII {
 	
 	public boolean addRecipe(IRecipe irecipe)
 	{
-		System.out.println("Adding: " + irecipe.getRecipeOutput().toString());
 		int size = getSize();
 		if(size >= recipesLength || irecipe == null)
 			return false;
