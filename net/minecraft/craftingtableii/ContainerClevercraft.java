@@ -205,19 +205,20 @@ public class ContainerClevercraft extends Container {
 				return null;
 			} else if(shiftIsDown) {
 				onRequestMaximumRecipeOutput( (SlotClevercraft)inventorySlots.get(slotIndex) );
-				//if(!worldObj.multiplayerWorld)
-					populateSlotsWithRecipes();
+				populateSlotsWithRecipes();
 				return null;
 			} else {
 				onRequestSingleRecipeOutput( (SlotClevercraft)inventorySlots.get(slotIndex) );
 			}
 		}
 		
-		ItemStack itemstack = super.slotClick(slotIndex, mouseButton, shiftIsDown, entityplayer);
-		//if(!worldObj.multiplayerWorld)
-			populateSlotsWithRecipes();
-		
-		return itemstack; 
+		populateSlotsWithRecipes();
+		if(worldObj.multiplayerWorld) {
+			return null;
+		} else {
+			ItemStack itemstack = super.slotClick(slotIndex, mouseButton, shiftIsDown, entityplayer);
+			return itemstack;
+		}
     }
 	
 	private void onRequestSingleRecipeOutput( SlotClevercraft slot )
@@ -231,31 +232,28 @@ public class ContainerClevercraft extends Container {
 		// Send request packet if multiplayer.
 		if(worldObj.multiplayerWorld) {
 			mod_Clevercraft.getInstance().sendCraftingRequestPacket(recipeOutputStack, false);
-			onCraftMatrixChanged(recipeOutputStack);
-			thePlayer.inventory.setItemStack(null);
-			return;
-		} else {
-			// Take the necesarry ingredients from the player.
-			InventoryPlayer inventoryPlayer = thePlayer.inventory;
-			ItemStack[] recipeIngredients = getRecipeIngredients(irecipe);
-			for(int i = 0; i < recipeIngredients.length; i++) {
-				ItemStack recipeIngredient = recipeIngredients[i];
-				if(recipeIngredient == null)
-					continue;
-				for(int i1 = 0; i1 < inventoryPlayer.getSizeInventory(); i1++) {
-					ItemStack itemstack = inventoryPlayer.getStackInSlot(i1);
-					if(itemstack != null && itemstack.itemID == recipeIngredient.itemID
-							&& (itemstack.getItemDamage() == recipeIngredient.getItemDamage() || recipeIngredient.getItemDamage() == -1)) {
-						// Transfer the items in the player's inventory to the craft matrix.
-						craftMatrix.setInventorySlotContents(i, recipeIngredient.copy());
-						inventoryPlayer.decrStackSize(i1, 1);
-						break;
-					}
+		}
+		
+		// Take the necesarry ingredients from the player.
+		InventoryPlayer inventoryPlayer = thePlayer.inventory;
+		ItemStack[] recipeIngredients = getRecipeIngredients(irecipe);
+		for(int i = 0; i < recipeIngredients.length; i++) {
+			ItemStack recipeIngredient = recipeIngredients[i];
+			if(recipeIngredient == null)
+				continue;
+			for(int i1 = 0; i1 < inventoryPlayer.getSizeInventory(); i1++) {
+				ItemStack itemstack = inventoryPlayer.getStackInSlot(i1);
+				if(itemstack != null && itemstack.itemID == recipeIngredient.itemID
+						&& (itemstack.getItemDamage() == recipeIngredient.getItemDamage() || recipeIngredient.getItemDamage() == -1)) {
+					// Transfer the items in the player's inventory to the craft matrix.
+					craftMatrix.setInventorySlotContents(i, recipeIngredient.copy());
+					inventoryPlayer.decrStackSize(i1, 1);
+					break;
 				}
 			}
-			
-			onCraftMatrixChanged(recipeOutputStack);
 		}
+		
+		onCraftMatrixChanged(recipeOutputStack);
 	}
 	
 	private void onRequestMaximumRecipeOutput( SlotClevercraft slot )
@@ -266,7 +264,6 @@ public class ContainerClevercraft extends Container {
 		
 		if(worldObj.multiplayerWorld) {
 			mod_Clevercraft.getInstance().sendCraftingRequestPacket(slot.getIRecipe().getRecipeOutput(), true);
-			return;
 		}
 		
 		List collatedRecipe = new ArrayList();
@@ -321,12 +318,12 @@ public class ContainerClevercraft extends Container {
 			minimumOutputStackSize = Math.min(minimumOutputStackSize, stackDivision);
 		}
 		
-		
 		// Add output to the players inventory.
 		ItemStack recipeOutputStack = irecipe.getRecipeOutput().copy();
 		recipeOutputStack.stackSize *= minimumOutputStackSize;
 		
-		inventoryPlayer.addItemStackToInventory(recipeOutputStack);
+		if(!worldObj.multiplayerWorld)
+			inventoryPlayer.addItemStackToInventory(recipeOutputStack);
 		
 		// Transfer necessary items from player to craft matrix.
 		for(int i = 0; i < recipeIngredients.length; i++) {

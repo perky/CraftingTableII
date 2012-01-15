@@ -34,6 +34,7 @@ public class mod_Clevercraft extends BaseModMp {
 	
 	public static final int kPacketTypeSingleCraftingRequest = 0;
 	public static final int kPacketTypeMaximumCraftingRequest = 1;
+	public static final int kPacketTypeCraftingSuccess = 2;
 	
 	public mod_Clevercraft() {
 		
@@ -98,7 +99,10 @@ public class mod_Clevercraft extends BaseModMp {
 	
 	public void HandlePacket(Packet230ModLoader packet)
 	{
-		
+		if(packet.packetType == kPacketTypeCraftingSuccess) {
+			ItemStack outputStack = new ItemStack( packet.dataInt[0], packet.dataInt[1], packet.dataInt[2] );
+			ModLoader.getMinecraftInstance().thePlayer.inventory.addItemStackToInventory(outputStack);
+		}
 	}
 	
 	public static void initBlocks()
