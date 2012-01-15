@@ -212,11 +212,12 @@ public class ContainerClevercraft extends Container {
 			}
 		}
 		
-		populateSlotsWithRecipes();
 		if(worldObj.multiplayerWorld) {
+			populateSlotsWithRecipes();
 			return null;
 		} else {
 			ItemStack itemstack = super.slotClick(slotIndex, mouseButton, shiftIsDown, entityplayer);
+			populateSlotsWithRecipes();
 			return itemstack;
 		}
     }
