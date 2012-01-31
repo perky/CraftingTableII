@@ -1,4 +1,4 @@
-package net.minecraft.craftingtableii;
+package lukeperkin.craftingtableii;
 
 import net.minecraft.src.TileEntity;
 import net.minecraft.src.TileEntitySpecialRenderer;

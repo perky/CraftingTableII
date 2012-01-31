@@ -1,4 +1,4 @@
-package net.minecraft.craftingtableii;
+package lukeperkin.craftingtableii;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -45,6 +45,11 @@ public class GuiClevercraft extends GuiContainer {
         }	
     }
 	
+	public void updateContainer()
+	{
+		((ContainerClevercraft)inventorySlots).populateSlotsWithRecipes();
+	}
+	
 	public void initGui()
     {
 		super.initGui();
@@ -57,7 +62,7 @@ public class GuiClevercraft extends GuiContainer {
     }
 	
 	@Override
-	protected void func_35309_a(Slot slot, int i, int j, boolean flag)
+	protected void handleMouseClick(Slot slot, int i, int j, boolean flag)
     {
         inventorySlots.slotClick(i, j, flag, mc.thePlayer);
     }
@@ -106,7 +111,7 @@ public class GuiClevercraft extends GuiContainer {
             {
                 field_35312_g = 1.0F;
             }
-            //((ContainerClevercraft)inventorySlots).updateVisibleSlots(field_35312_g);
+            ((ContainerClevercraft)inventorySlots).updateVisibleSlots(field_35312_g);
         }
         super.drawScreen(i, j, f);
         //----
@@ -124,9 +129,12 @@ public class GuiClevercraft extends GuiContainer {
                 
                 if(slot1.getStack() != null && slot1.getStack().getItem() != null && getIsMouseOverSlot(slot1, i, j))
             	{
-                		//SlotClevercraft slotclever = (SlotClevercraft)slot1;
+                	if(slot1 instanceof SlotClevercraft) {
+                		SlotClevercraft slotclever = (SlotClevercraft)slot1;
+                		guiItemDescriptions.drawDescriptionFromIRecipe(i, j, slotclever.getIRecipe(), true);
+                	} else {
                 		guiItemDescriptions.drawDescriptions(i, j, slot1.getStack(), true);
-                    	//guiItemDescriptions.displayCollatedRecipe(i, j, slotclever.getCollatedRecipe());
+                	}
             	}
             }
         	

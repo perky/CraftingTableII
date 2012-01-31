@@ -1,4 +1,4 @@
-package net.minecraft.craftingtableii;
+package lukeperkin.craftingtableii;
 
 import java.util.HashMap;
 import java.util.Map;

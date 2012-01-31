@@ -1,4 +1,4 @@
-package net.minecraft.craftingtableii;
+package lukeperkin.craftingtableii;
 
 import net.minecraft.src.IRecipe;
 import net.minecraft.src.InventoryBasic;

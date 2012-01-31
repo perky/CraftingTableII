@@ -4,7 +4,7 @@
 // Keep in mind that you still need to fill in some blanks
 // - ZeuX
 
-package net.minecraft.craftingtableii;
+package lukeperkin.craftingtableii;
 
 import net.minecraft.src.Entity;
 import net.minecraft.src.ModelBase;

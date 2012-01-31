@@ -6,13 +6,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import lukeperkin.craftingtableii.BlockClevercraft;
+import lukeperkin.craftingtableii.ContainerClevercraft;
+import lukeperkin.craftingtableii.GuiClevercraft;
+import lukeperkin.craftingtableii.RenderCraftingTableII;
+
 import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.craftingtableii.BlockClevercraft;
-import net.minecraft.craftingtableii.ContainerClevercraft;
-import net.minecraft.craftingtableii.GuiClevercraft;
-import net.minecraft.craftingtableii.RenderCraftingTableII;
 import net.minecraft.src.forge.ICraftingHandler;
 import net.minecraft.src.forge.MinecraftForge;
 import au.com.bytecode.opencsv.CSVReader;
@@ -63,7 +64,7 @@ public class mod_Clevercraft extends BaseModMp {
 		
 		// Setup block render.
 		RenderCraftingTableII render = new RenderCraftingTableII();
-		ModLoader.RegisterTileEntity(net.minecraft.craftingtableii.TileEntityCraftingTableII.class, "craftingtableII", render);
+		ModLoader.RegisterTileEntity(lukeperkin.craftingtableii.TileEntityCraftingTableII.class, "craftingtableII", render);
 
 		ModLoaderMp.RegisterGUI(this, guiIDCraftingTableII);
 		
@@ -112,12 +113,13 @@ public class mod_Clevercraft extends BaseModMp {
 	
 	public GuiScreen HandleGUI(int inventoryType) 
     {
-            if(inventoryType == guiIDCraftingTableII)
-                    return new GuiClevercraft( 
+            if(inventoryType == guiIDCraftingTableII) {
+            	GuiClevercraft gui = new GuiClevercraft( 
                     		ModLoader.getMinecraftInstance().thePlayer,
                     		ModLoader.getMinecraftInstance().theWorld
                     );
-            else
+            	return gui;
+            } else
             	return null;
     }
 	
@@ -179,7 +181,7 @@ public class mod_Clevercraft extends BaseModMp {
 
 	@Override
 	public String getVersion() {
-		return "1.6";
+		return "1.6.2";
 	}
 
 	@Override
